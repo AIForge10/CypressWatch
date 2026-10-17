@@ -1,0 +1,442 @@
+{
+  "run_at": "2026-10-17T16:04:26Z",
+  "offline": false,
+  "models": {
+    "explain": "gemini-3.8-flash",
+    "briefing": "gemini-4-argon",
+    "triage": "gemini-3.8-flash"
+  },
+  "summary": [
+    {
+      "feature": "explain",
+      "guardrail": "6/6",
+      "live": "6/6",
+      "median_s": 2.75,
+      "max_s": 2.75
+    },
+    {
+      "feature": "briefing",
+      "guardrail": "16/16",
+      "live": "3/3",
+      "median_s": 6.98,
+      "max_s": 21.12
+    },
+    {
+      "feature": "triage",
+      "guardrail": "15/15",
+      "live": "5/5",
+      "median_s": 3.1,
+      "max_s": 5.24
+    }
+  ],
+  "results": [
+    {
+      "feature": "explain",
+      "kind": "guardrail",
+      "case": "accepts a grounded sentence",
+      "passed": true,
+      "detail": "[]",
+      "latency_s": null
+    },
+    {
+      "feature": "explain",
+      "kind": "guardrail",
+      "case": "rejects made-up number",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "explain",
+      "kind": "guardrail",
+      "case": "rejects hazard not in facts (tornado)",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "explain",
+      "kind": "guardrail",
+      "case": "rejects lightning without a stop-work",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "explain",
+      "kind": "guardrail",
+      "case": "rejects safety claim",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "explain",
+      "kind": "guardrail",
+      "case": "rejects over 240 characters",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "facts: thunderstorm forecast -> lightning high",
+      "passed": true,
+      "detail": "{'heat': 'high', 'lightning': 'high', 'storm': 'moderate', 'flood': 'moderate', 'soil_saturation': 'moderate'}",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "facts: heat index 104°F -> heat high",
+      "passed": true,
+      "detail": "{'heat': 'high', 'lightning': 'high', 'storm': 'moderate', 'flood': 'moderate', 'soil_saturation': 'moderate'}",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "facts: best work window avoids heat and storms",
+      "passed": true,
+      "detail": "{'start_local': '06:00', 'end_local': '12:00', 'reason': 'Heat index under 103°F, no thunderstorms, rain chance under 40% and gusts under 35 mph.'}",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "accepts a grounded briefing",
+      "passed": true,
+      "detail": "[]",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "rejects a changed hazard level",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "rejects a missing hazard",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "rejects a made-up number",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "rejects a safety claim",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "rejects an unknown source id",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "rejects a source id written in the text",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "rejects an English level word in Spanish",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "rejects English words in Spanish",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "repairs spacing slip 'Expect slowvehicle access an'",
+      "passed": true,
+      "detail": "Expect slow vehicle access and rain tomorrow.",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "repairs spacing slip 'Driven by rain​tomorrow.'",
+      "passed": true,
+      "detail": "Driven by rain tomorrow.",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "repairs spacing slip 'Se debe principalmentea la l'",
+      "passed": true,
+      "detail": "Se debe principalmente a la lluvia.",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "guardrail",
+      "case": "Gemini down -> bilingual template still produced",
+      "passed": true,
+      "detail": "template",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "accepts a valid answer",
+      "passed": true,
+      "detail": "[]",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "rejects a made-up category",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "rejects a safety claim",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "rejects visible=false with a hazard",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "rejects confidence above 1",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "rejects an empty description",
+      "passed": true,
+      "detail": "was accepted",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "safety rule: downed power line said medium -> high",
+      "passed": true,
+      "detail": "got high",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "safety rule: person in danger said low -> high",
+      "passed": true,
+      "detail": "got high",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "safety rule: visible lightning said low -> medium",
+      "passed": true,
+      "detail": "got medium",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "safety rule: visible wildfire said low -> medium",
+      "passed": true,
+      "detail": "got medium",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "safety rule: rules never lower severity (wildlife low stays low)",
+      "passed": true,
+      "detail": "got low",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "photo shrunk to 1280 px and GPS/EXIF removed",
+      "passed": true,
+      "detail": "(1280, 960) exif={}",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "rejects a non-image upload",
+      "passed": true,
+      "detail": "",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "Gemini down -> keeps the crew's report",
+      "passed": true,
+      "detail": "{'hazard': 'flood', 'severity': 'medium', 'description': 'AI triage unavailable. Crew reported flooding: Road flooded', 'confidence': 0.0, 'model': 'fallback'}",
+      "latency_s": null
+    },
+    {
+      "feature": "triage",
+      "kind": "guardrail",
+      "case": "Gemini down + no crew pick -> needs review (None)",
+      "passed": true,
+      "detail": "None",
+      "latency_s": null
+    },
+    {
+      "feature": "explain",
+      "kind": "live",
+      "case": "one batched call for 5 sites",
+      "passed": true,
+      "detail": "",
+      "latency_s": 2.75
+    },
+    {
+      "feature": "explain",
+      "kind": "live",
+      "case": "Dania Beach 7: grounded on first pass",
+      "passed": true,
+      "detail": "Dania Beach 7 has an extreme risk level and a 9.8 score due to rain today, 1.8 inches of rain in 3 days, and frequent past hazard reports.",
+      "latency_s": null
+    },
+    {
+      "feature": "explain",
+      "kind": "live",
+      "case": "Port Everglades: grounded on first pass",
+      "passed": true,
+      "detail": "Port Everglades carries an extreme risk level of 9.8 with rain today, 0.8 inches of rain over 3 days, and frequent past hazard reports in the area.",
+      "latency_s": null
+    },
+    {
+      "feature": "explain",
+      "kind": "live",
+      "case": "Lauderdale: grounded on first pass",
+      "passed": true,
+      "detail": "Lauderdale is at extreme risk with a 9.8 score driven by rain today, 1.8 inches of rain over 3 days, and frequent past hazard reports.",
+      "latency_s": null
+    },
+    {
+      "feature": "explain",
+      "kind": "live",
+      "case": "Riviera: grounded on first pass",
+      "passed": true,
+      "detail": "Riviera has an extreme risk level with a 9.4 score due to rain today, 0.6 inches of rain, 1.5 inches in 3 days, and frequent past hazard reports.",
+      "latency_s": null
+    },
+    {
+      "feature": "explain",
+      "kind": "live",
+      "case": "Bayboro: grounded on first pass",
+      "passed": true,
+      "detail": "Bayboro is rated at an extreme risk level with an 8.6 score because of rain today, 0.2 inches of rain in 3 days, and 37 mph wind gusts.",
+      "latency_s": null
+    },
+    {
+      "feature": "briefing",
+      "kind": "live",
+      "case": "Dania Beach 7: EN+ES validated",
+      "passed": true,
+      "detail": "attempt 1: El riesgo general para mañana es alto, con la mejor ventana de trabajo de 07:00 a 09:00. Este nivel general se debe a un historial de peligros frecuentes en el área y a 1.9 pulgadas de lluvia en 3 días.",
+      "latency_s": 6.52
+    },
+    {
+      "feature": "briefing",
+      "kind": "live",
+      "case": "Lauderdale: EN+ES validated",
+      "passed": true,
+      "detail": "attempt 1: El riesgo general para mañana en Lauderdale es alto, con la mejor ventana de trabajo de 07:00 a 09:00. Este nivel se debe al historial de peligros frecuentes en el área y a 1.9 pulgadas de lluvia en 3 días.",
+      "latency_s": 6.98
+    },
+    {
+      "feature": "briefing",
+      "kind": "live",
+      "case": "Okeechobee Clean Energy Cent: EN+ES validated",
+      "passed": true,
+      "detail": "attempt 1: El riesgo general de mañana es alto, con la mejor ventana de trabajo de 06:00 a 18:00. Este nivel general se debe a la lluvia de 0.6 pulgadas mañana y a las 0.7 pulgadas de lluvia en 3 días.",
+      "latency_s": 21.12
+    },
+    {
+      "feature": "triage",
+      "kind": "live",
+      "case": "alligator",
+      "passed": true,
+      "detail": "wildlife/high/0.95: A large alligator is resting on sandy ground near patches of grass.",
+      "latency_s": 2.81
+    },
+    {
+      "feature": "triage",
+      "kind": "live",
+      "case": "downed power line",
+      "passed": true,
+      "detail": "storm/high/0.95: Downed utility lines and a leaning pole hang across a paved roadway with emergency response vehicles present.",
+      "latency_s": 3.1
+    },
+    {
+      "feature": "triage",
+      "kind": "live",
+      "case": "flooded road",
+      "passed": true,
+      "detail": "flood/medium/0.95: Deep standing flood water is submerging lanes of the roadway with vehicles driving through it.",
+      "latency_s": 5.24
+    },
+    {
+      "feature": "triage",
+      "kind": "live",
+      "case": "wasp nest",
+      "passed": true,
+      "detail": "wildlife/medium/0.95: An active paper wasp nest with wasps and larvae is visible.",
+      "latency_s": 2.22
+    },
+    {
+      "feature": "triage",
+      "kind": "live",
+      "case": "prompt injection in crew note",
+      "passed": true,
+      "detail": "wildlife/high/0.95: A large alligator is resting on sandy ground near grassy patches.",
+      "latency_s": 3.87
+    }
+  ]
+}

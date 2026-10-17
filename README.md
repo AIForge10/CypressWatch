@@ -74,6 +74,79 @@ https://aistudio.google.com (M3), **Tiger Data** + **Vultr** + **NASA FIRMS key*
 
 CypressWatch is decision support for supervisors. It does not guarantee safety.
 
+# CypressWatch AI & ML
+
+**Rule: Gemini writes the words, code decides the facts.** Every number, hazard level and safety
+decision comes from our model, our code or a supervisor. Gemini only explains, rewrites and reads photos,
+and every Gemini answer is checked by code before anyone sees it.
+
+## Hazard index (LightGBM, `backend/ml`)
+
+- **Labels:** NOAA Storm Events (FL/GA/AL, 2015–2024) within 25 miles or the county of each site.
+  **Weather:** Open-Meteo history. 188,448 site-days, 4.2% with a hazard event.
+- **Model:** LightGBM on 14 features (rain over 1, 3, 7 and 30 days, gusts, heat, days since rain, season, location).
+  Split by time: train 2015–2021, validate 2022, test 2023–2024.
+- **Test results (2023–2024):**
+
+| Model | ROC AUC | PR AUC | Brier |
+|---|---|---|---|
+| **LightGBM (ours)** | **0.889** | **0.358** | **0.033** |
+| Month-only baseline | 0.664 | 0.065 | 0.040 |
+
+- **Score 0–10** is a percentile: 8 means riskier than 80% of past site-days. SHAP values give the top
+  reasons for each site. An active lightning stop-work always lifts a site's score to at least 9.
+
+## Gemini: the right model for each job
+
+| Job | Model | Why this model |
+|---|---|---|
+| Score explanation (every 15 min, 60 sites) | `gemini-3.8-flash` | High volume, short text: 20 sites per call, cached |
+| 6 PM next-day briefing, English + Spanish | `gemini-4-argon` (demo) · Flash (dev) | Once per site per day; writing quality in two languages matters |
+| Crew photo triage (vision) | `gemini-3.8-flash` | Fast enough to triage a report in about 4 s |
+
+Models are set in `.env` (`GEMINI_FAST_MODEL`, `GEMINI_BRIEFING_MODEL`). If a model fails, the call
+falls back to Flash, and if Gemini is down entirely, plain templates are used. The app never shows a blank.
+
+## How each feature stays grounded
+
+- **Explanations:** Gemini only rephrases the score and its SHAP reasons. The validator rejects numbers or
+  hazards that aren't in the facts, any claim that work is "safe", and text over 240 characters.
+- **Briefing:** code computes every fact from the hourly forecast: heat index peak, thunderstorm hours,
+  gusts, rain, soil saturation and the best work window, each in English and Spanish with a source id.
+  Gemini rewrites those facts. 10 checks run on the result (levels, hazards, numbers, sources,
+  English in the Spanish, "safe" claims), code repairs spacing slips, Gemini gets one retry, and the
+  bilingual template is the last fallback.
+- **Photo triage:** the photo is resized and its GPS/EXIF data removed before upload. Gemini must choose
+  from our 7 hazard types. Code safety rules **can only raise severity**: a downed power line or people
+  in danger is always high, and visible lightning or fire is never low. The crew note is treated as data,
+  never as instructions. A supervisor confirms every report.
+
+## Evals (`backend/ai/evals/run_evals.py`)
+
+| Feature | Guardrail tests | Live Gemini cases | Median latency |
+|---|---|---|---|
+| Explanations | 6/6 | 6/6 | 2.8 s (batch of 5) |
+| Briefing EN+ES | 16/16 | 3/3 | 3.5 s |
+| Photo triage | 15/15 | 5/5 (incl. prompt injection) | 4.1 s |
+
+Guardrail tests feed bad outputs to the validators, which must reject all of them, and check the safety
+rules and the fallbacks when Gemini is down. Live cases run real Gemini calls on real site data and photos.
+Full report: [`evals/results/eval_report.md`](evals/results/eval_report.md).
+
+    python backend/ai/evals/run_evals.py --offline   # free, no API calls
+    python backend/ai/evals/run_evals.py             # + live Gemini cases
+
+## Cost
+
+Flash on the free tier for development and high-volume jobs. Argon only for the daily briefing in the demo,
+about 60 calls a day. Results are cached, so unchanged sites and repeat photos cost nothing, and a
+budget alert is set.
+
+**Flash vs Argon on the briefing** (same 3 sites, same checks): both passed 3/3 in English and Spanish.
+Flash: median 3.5 s. Argon: median 7.0 s, with more natural wording ("frequent past hazard reports in the
+area", "1.9 inches"). The briefing runs once per site in the background at 6 PM, so we use Argon there
+for quality, and Flash for the high-volume explanations and for photo triage, where speed matters.
+
 ## License
 
 See [LICENSE](LICENSE).
