@@ -45,7 +45,7 @@ CypressWatch/
 ## Quick start
 
 ```bash
-git clone <repo-url> CypressWatch && cd CypressWatch
+git clone https://github.com/AIForge10/CypressWatch && cd CypressWatch
 
 # Frontend (M1, M2)
 nvm install 20 && nvm use 20
