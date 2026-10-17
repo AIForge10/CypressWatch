@@ -70,6 +70,11 @@ async function asAssignedSite<D extends { detail: SiteDetail }>(data: D, siteId:
   const s = list.find((x) => x.site_id === siteId)
   const swapped = JSON.parse(JSON.stringify(data).split(SAMPLE_SITE).join(siteId)) as D
   if (s) {
+    // Move the sample reports to the assigned site's location too, so they sit next to it on the map.
+    const dLat = s.lat - data.detail.site.lat
+    const dLon = s.lon - data.detail.site.lon
+    const withReports = swapped as unknown as { reports?: { lat: number; lon: number }[] }
+    if (withReports.reports) withReports.reports = withReports.reports.map((r) => ({ ...r, lat: r.lat + dLat, lon: r.lon + dLon }))
     swapped.detail = { ...swapped.detail, site: { ...swapped.detail.site, site_id: s.site_id, name: s.name, county: s.county, state: s.state, lat: s.lat, lon: s.lon, plant_type: s.plant_type, eia_plant_id: s.eia_plant_id } }
   }
   return swapped
