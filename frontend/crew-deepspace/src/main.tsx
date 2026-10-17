@@ -4,8 +4,6 @@ import { createRoot, hydrateRoot } from 'react-dom/client'
 import { routes } from '@generouted/react-router/lazy'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import { installStaleChunkRecovery } from './stale-chunk-recovery'
-import '@fontsource/atkinson-hyperlegible/400.css'
-import '@fontsource/atkinson-hyperlegible/700.css'
 import './styles.css'
 
 async function main() {

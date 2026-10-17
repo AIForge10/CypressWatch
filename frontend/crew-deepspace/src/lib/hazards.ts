@@ -14,8 +14,8 @@ export const HAZARD_KEYS = Object.keys(HAZARDS) as HazardKey[]
 
 /** Level is always shown as a word and an icon too; color is only a hint. */
 export const LEVELS: Record<RiskLevel, { label: string; cls: string }> = {
-  low: { label: 'Low', cls: 'bg-[#d6efdf] border-[#14663a] text-[#0f1b14]' },
-  moderate: { label: 'Moderate', cls: 'bg-[#fff0c2] border-[#8a5a00] text-[#0f1b14]' },
-  high: { label: 'High', cls: 'bg-[#ffd9b8] border-[#a24100] text-[#0f1b14]' },
-  extreme: { label: 'Extreme', cls: 'bg-[#c0152a] border-[#7a0c1b] text-white' },
+  low: { label: 'Low', cls: 'bg-success-soft border-success/40 text-success' },
+  moderate: { label: 'Moderate', cls: 'bg-caution border-[#9a6700]/50 text-[#7a5200]' },
+  high: { label: 'High', cls: 'bg-danger-soft border-destructive/50 text-destructive' },
+  extreme: { label: 'Extreme', cls: 'bg-destructive border-[#721c16] text-white' },
 }

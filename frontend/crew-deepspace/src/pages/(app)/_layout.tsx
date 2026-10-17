@@ -15,36 +15,64 @@
  * their own layout without inheriting it.
  */
 
-import { Suspense, useEffect, useState, type ReactNode } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Suspense, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
 import { DeepSpaceAuthProvider, useAuthStatus } from 'deepspace'
 import { RecordProvider, RecordScope } from 'deepspace'
 import CrewShell from '../../components/CrewShell'
 import { FreshnessProvider, useFreshness } from '../../lib/freshness'
-import { CrewDataProvider } from '../../lib/crewData'
+import { CrewDataProvider, USE_MOCKS } from '../../lib/crewData'
+import { AssignmentBridge, AssignmentContext, readCachedAssignment, UNKNOWN, type AssignmentState } from '../../lib/assignment'
 import { useCrewAccess } from '../../lib/access'
-import { SignedOutPanel } from '../../components/SignedOutPanel'
+import { RecordsReadyContext } from '../../lib/sync'
+import { SignedOutPanel, SiteWaitPanel } from '../../components/SignedOutPanel'
 import { useToast } from '@/components/ui'
 import { APP_NAME, SCOPE_ID } from '../../constants'
 import { schemas } from '../../schemas'
 
-/** Sign-in gate + data + shell. Inside the auth and freshness providers. */
+/** Sign-in gate + site assignment + data + shell. Inside the auth and freshness providers. */
 function CrewApp() {
   const { online } = useFreshness()
   const access = useCrewAccess(online)
+  const recordsReady = useContext(RecordsReadyContext)
+  const { pathname } = useLocation()
+  // Demo mode: an admin assigns each person a site. What this phone last saw is used until the live answer arrives.
+  const cached = useMemo(() => (USE_MOCKS ? readCachedAssignment(access.userId) : null), [access.userId])
+  const [live, setLive] = useState<AssignmentState | null>(null)
+  const onAssignment = useCallback((s: AssignmentState) => setLive(s), [])
+  const asg: AssignmentState = !USE_MOCKS ? { loaded: true, siteId: null, isAdmin: false } : (live ?? cached ?? UNKNOWN)
+  const needSite = USE_MOCKS && access.allowed && asg.loaded && !asg.siteId
+  const waitSite = USE_MOCKS && access.allowed && !asg.loaded
+  const onTeam = pathname === '/team' && asg.isAdmin
   return (
     // Keyed by person: a different person on this phone gets fresh state.
-    <CrewDataProvider key={access.userId ?? 'anon'} enabled={access.allowed} identity={{ userId: access.userId, name: access.name }}>
-      <CrewShell access={access}>
-        {access.allowed ? (
-          <Suspense fallback={<div className="flex h-full items-center justify-center text-muted-foreground">Loading...</div>}>
-            <Outlet />
-          </Suspense>
-        ) : (
-          <SignedOutPanel checking={access.kind === 'checking'} online={online} />
-        )}
-      </CrewShell>
-    </CrewDataProvider>
+    <AssignmentContext.Provider value={asg}>
+      {USE_MOCKS && access.allowed && access.userId && recordsReady && <AssignmentBridge key={access.userId} userId={access.userId} onState={onAssignment} />}
+      <CrewDataProvider
+        key={`${access.userId ?? 'anon'}:${asg.siteId ?? 'none'}`}
+        enabled={access.allowed && (!USE_MOCKS || !!asg.siteId)}
+        identity={{ userId: access.userId, name: access.name }}
+        assignedSite={asg.siteId}
+      >
+        <CrewShell access={access}>
+          {!access.allowed ? (
+            <SignedOutPanel checking={access.kind === 'checking'} online={online} />
+          ) : onTeam ? (
+            <Suspense fallback={null}>
+              <Outlet />
+            </Suspense>
+          ) : waitSite ? (
+            <SiteWaitPanel mode="checking" online={online} isAdmin={false} />
+          ) : needSite ? (
+            <SiteWaitPanel mode="none" online={online} isAdmin={asg.isAdmin} />
+          ) : (
+            <Suspense fallback={<div className="flex h-full items-center justify-center text-muted-foreground">Loading...</div>}>
+              <Outlet />
+            </Suspense>
+          )}
+        </CrewShell>
+      </CrewDataProvider>
+    </AssignmentContext.Provider>
   )
 }
 
@@ -106,7 +134,7 @@ function AuthBoot({ children }: { children: ReactNode }) {
       }
     >
       <RecordScope roomId={SCOPE_ID} schemas={schemas}>
-        {children}
+        <RecordsReadyContext.Provider value>{children}</RecordsReadyContext.Provider>
       </RecordScope>
     </RecordProvider>
   )

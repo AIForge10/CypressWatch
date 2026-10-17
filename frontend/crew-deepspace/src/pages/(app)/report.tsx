@@ -54,7 +54,7 @@ export default function ReportPage() {
 
   if (!detail || !me) {
     return (
-      <Screen title="Report a hazard">
+      <Screen title="Report a hazard" eyebrow="Tell your supervisor">
         <Message>Your site is not loaded yet. Open the Site tab first.</Message>
       </Screen>
     )
@@ -86,9 +86,9 @@ export default function ReportPage() {
   }
 
   return (
-    <Screen title="Report a hazard">
+    <Screen title="Report a hazard" eyebrow="Tell your supervisor">
       {done && (
-        <p role="status" data-testid="report-done" className="flex items-start gap-2 rounded-xl border-2 border-[#14663a] bg-[#d6efdf] p-4 text-lg font-bold">
+        <p role="status" data-testid="report-done" className="flex items-start gap-2 rounded-xl border border-success bg-success-soft p-4 text-lg font-bold">
           {done === 'sent' ? <CircleCheck className="mt-0.5 h-6 w-6 shrink-0" aria-hidden /> : <Clock className="mt-0.5 h-6 w-6 shrink-0" aria-hidden />}
           {done === 'sent' ? 'Report sent to your team.' : 'Saved on this phone. It uploads on its own when signal returns.'}
         </p>
@@ -115,7 +115,7 @@ export default function ReportPage() {
                 type="button"
                 aria-pressed={on}
                 onClick={() => setHazard(on ? null : k)}
-                className={cn('flex min-h-14 items-center gap-2 rounded-xl border-2 px-3 text-base font-bold', on ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card')}
+                className={cn('flex min-h-14 items-center gap-2 rounded-lg border-2 px-3 text-base font-bold', on ? 'border-primary bg-primary text-primary-foreground' : 'border-input bg-card')}
               >
                 {on ? <Check className="h-5 w-5" aria-hidden /> : <Icon className="h-5 w-5" aria-hidden />}
                 {label}
@@ -133,14 +133,14 @@ export default function ReportPage() {
           rows={3}
           maxLength={280}
           placeholder="Where exactly? Example: by the culvert next to pole 14"
-          className="w-full rounded-xl border-2 border-border bg-card p-3 text-base"
+          className="w-full rounded-lg border-2 border-input bg-card p-3 text-base"
         />
         <p className="mt-2 flex items-center gap-2 text-sm">
           <MapPin className="h-4 w-4" aria-hidden /> The pin uses your phone&apos;s location when you send.
         </p>
       </Card>
 
-      {problem && <p role="alert" className="rounded-xl border-2 border-destructive bg-card p-3 text-base font-bold text-destructive">{problem}</p>}
+      {problem && <p role="alert" className="rounded-lg border-2 border-destructive bg-card p-3 text-base font-bold text-destructive">{problem}</p>}
       <BigButton data-testid="send-report" disabled={busy} onClick={() => void send()}>
         {busy ? 'Saving...' : online ? 'Send report' : 'Save report (no signal)'}
       </BigButton>

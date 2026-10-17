@@ -59,11 +59,20 @@ export function userKey(base: string, userId: string | null): string {
   return `${base}:${userId ?? 'anon'}`
 }
 
+/** Per-person, per-site storage key. A reset or move on one site never touches another site's saved data. */
+export function siteKey(base: string, userId: string | null, siteId: string | null): string {
+  return `${base}:${userId ?? 'anon'}:${siteId ?? 'none'}`
+}
+
 /** Forget this person on this phone. Waiting uploads stay queued and are tagged with their owner. */
 export function forgetUser(userId: string | null) {
   try {
     localStorage.removeItem(HINT_KEY)
-    for (const base of ['cw:crew-cache', 'cw:acks', 'cw:local-reports']) localStorage.removeItem(userKey(base, userId))
+    // Every site's saved copy for this person (keys look like `base:userId` or `base:userId:siteId`).
+    for (const base of ['cw:crew-cache', 'cw:acks', 'cw:local-reports', 'cw:reset-seen', 'cw:assignment']) {
+      const mine = userKey(base, userId)
+      for (const k of Object.keys(localStorage)) if (k === mine || k.startsWith(`${mine}:`)) localStorage.removeItem(k)
+    }
   } catch {
     /* ignore */
   }
@@ -115,4 +124,12 @@ export function useCrewAccess(online: boolean): Access {
 
   if (!isLoaded && !waited) return { kind: 'checking', allowed: false, userId: null, name: null, email: null }
   return { kind: 'signed-out', allowed: false, userId: null, name: null, email: null }
+}
+
+/**
+ * Starts Google sign-in. Same address the SDK's own sign-in box uses, but without that box,
+ * which also shows an email/password form that can't create accounts.
+ */
+export function startGoogleSignIn(): void {
+  window.location.href = '/api/auth/social-redirect?provider=google'
 }
