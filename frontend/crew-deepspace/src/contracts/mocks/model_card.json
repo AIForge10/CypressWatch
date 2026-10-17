@@ -1,0 +1,58 @@
+{
+  "model_version": "hazard-index-v1",
+  "algorithm": "LightGBM gradient-boosted classifier, calibrated, scaled to 0\u201310",
+  "trained_at": "2026-10-17T14:00:00Z",
+  "training_data": [
+    {
+      "name": "NOAA Storm Events (Florida)",
+      "rows": 0,
+      "years": "TBD"
+    },
+    {
+      "name": "OSHA Severe Injury Reports (weather and heat related)",
+      "rows": 0,
+      "years": "TBD"
+    },
+    {
+      "name": "Open-Meteo historical weather per site",
+      "rows": 0,
+      "years": "TBD"
+    }
+  ],
+  "label": "A hazardous weather event or weather-related injury within 25 miles of the site that day",
+  "features": [
+    "max_heat_index_f",
+    "rain_24h_in",
+    "rain_7d_in",
+    "soil_moisture_pct",
+    "wind_gust_max_mph",
+    "cape_jkg",
+    "strikes_within_10mi_1h",
+    "flood_zone",
+    "distance_to_river_miles",
+    "plant_type"
+  ],
+  "evaluation": [
+    {
+      "split": "Time-based: test on the two most recent years",
+      "metric": "ROC AUC",
+      "model": 0.0,
+      "baseline": 0.0,
+      "baseline_name": "Heat index only"
+    }
+  ],
+  "calibration_note": "PLACEHOLDER: M3 fills in after training.",
+  "top_global_features": [
+    {
+      "feature": "strikes_within_10mi_1h",
+      "importance": 0.0
+    },
+    {
+      "feature": "max_heat_index_f",
+      "importance": 0.0
+    }
+  ],
+  "limitations": [
+    "PLACEHOLDER: M3 fills in. All numbers in this file are zeros until the model is trained."
+  ]
+}

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!--
+  Active theme is set on the <html> element below.
+  To switch themes, change `data-theme` to any id defined in src/themes.ts.
+  Color values per theme live in src/themes.css.
+-->
+<html lang="en" data-theme="cypress">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#1f5e3b" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="CypressWatch" />
+    <title>CypressWatch Crew</title>
+    <!--
+      First-paint background, keyed to the data-theme attribute above.
+      Without this the browser paints white until the CSS bundle arrives —
+      a hard flash on the dark themes. Each value mirrors --color-background
+      in src/styles.css (slate) / src/themes.css; keep them in sync when
+      adding or editing themes.
+    -->
+    <style>
+      html { background-color: #0a0a0a; color-scheme: dark; }
+      html[data-theme="cypress"] { background-color: #f2f6f1; color-scheme: light; }
+      html[data-theme="paper"] { background-color: #ffffff; color-scheme: light; }
+      /* Add one line per theme you create, mirroring its --color-background. */
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

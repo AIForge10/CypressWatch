@@ -1,0 +1,78 @@
+{
+  "server_time": "2026-10-17T18:42:10Z",
+  "alerts": [
+    {
+      "alert_id": "alt_7f3a",
+      "site_id": "site_012",
+      "type": "stop_work_lightning",
+      "severity": "stop_work",
+      "status": "active",
+      "title": "Stop work: lightning 4.2 miles away",
+      "message": "Lightning struck within 10 miles. Stop outdoor work and shelter. All clear at 3:10 PM if no new strikes.",
+      "started_at": "2026-10-17T18:21:47Z",
+      "stop_work_until": "2026-10-17T19:10:05Z",
+      "cleared_at": null,
+      "acknowledged_by": [],
+      "evidence": [
+        {
+          "source": "goes-glm",
+          "observed_at": "2026-10-17T18:40:05Z"
+        }
+      ],
+      "ledger_record_id": "rec_5521",
+      "simulated": false
+    },
+    {
+      "alert_id": "alt_8b10",
+      "site_id": "site_031",
+      "type": "flood_risk",
+      "severity": "warning",
+      "status": "active",
+      "title": "Flood risk: 3.1 in of rain overnight",
+      "message": "River site with 3.1 inches of overnight rain and the nearest river gauge rising. Check access roads before driving in.",
+      "started_at": "2026-10-17T10:30:00Z",
+      "stop_work_until": null,
+      "cleared_at": null,
+      "acknowledged_by": [
+        {
+          "user_id": "auth0|crew_022",
+          "name": "Ana Ruiz",
+          "at": "2026-10-17T11:02:13Z"
+        }
+      ],
+      "evidence": [
+        {
+          "source": "open-meteo",
+          "observed_at": "2026-10-17T10:00:00Z"
+        },
+        {
+          "source": "usgs",
+          "observed_at": "2026-10-17T10:15:00Z"
+        }
+      ],
+      "ledger_record_id": "rec_5409",
+      "simulated": false
+    },
+    {
+      "alert_id": "alt_8c22",
+      "site_id": "site_007",
+      "type": "heat",
+      "severity": "warning",
+      "status": "active",
+      "title": "Heat index 106\u00b0F",
+      "message": "Heat index above 105\u00b0F until about 5 PM. Schedule water, rest, and shade breaks.",
+      "started_at": "2026-10-17T16:00:00Z",
+      "stop_work_until": null,
+      "cleared_at": null,
+      "acknowledged_by": [],
+      "evidence": [
+        {
+          "source": "open-meteo",
+          "observed_at": "2026-10-17T18:00:00Z"
+        }
+      ],
+      "ledger_record_id": null,
+      "simulated": false
+    }
+  ]
+}
