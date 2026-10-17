@@ -21,6 +21,8 @@ type AuthContextValue = {
   logout: () => void;
   getAccessToken: () => Promise<string | null>;
   hasPermission: (permission: Permission) => boolean;
+  requestStepUp: (returnTo: string) => Promise<void>;
+  hasFreshMfa: (requestedAt: number) => boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -31,6 +33,17 @@ const auth0Audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 const auth0RoleClaim = import.meta.env.VITE_AUTH0_ROLE_CLAIM ?? 'https://cypresswatch.app/role';
 const auth0SiteIdsClaim = import.meta.env.VITE_AUTH0_SITE_IDS_CLAIM ?? 'https://cypresswatch.app/site_ids';
 const auth0Configured = Boolean(auth0Domain && auth0ClientId);
+const mfaAcr = 'http://schemas.openid.net/pape/policies/2007/06/multi-factor';
+
+function hasFreshMfaClaim(user: Auth0User | undefined, requestedAt: number): boolean {
+  if (!user || !Number.isFinite(requestedAt)) return false;
+  const claims = user as Auth0User & Record<string, unknown>;
+  const amr = claims.amr;
+  const hasMfa = (Array.isArray(amr) && amr.includes('mfa')) || claims.acr === mfaAcr;
+  const authTime = claims.auth_time;
+  // Reauthentication is requested with max_age=0; do not accept a prior MFA session.
+  return hasMfa && typeof authTime === 'number' && authTime * 1000 >= requestedAt - 5000 && Date.now() - authTime * 1000 < 5 * 60 * 1000;
+}
 
 function roleFromClaim(value: unknown): Role | null {
   if (value === 'supervisor' || value === 'crew' || value === 'owner') return value;
@@ -66,6 +79,8 @@ function MockAuthProvider({ children }: { children: ReactNode }) {
     logout: () => { localStorage.removeItem(storageKey); setRole(null); },
     getAccessToken: async () => user ? 'mock-access-token' : null,
     hasPermission: (permission) => permissionsFor(user?.role, permission),
+    requestStepUp: async () => {},
+    hasFreshMfa: () => false,
   }), [user]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -86,7 +101,12 @@ function Auth0ContextBridge({ children }: { children: ReactNode }) {
     logout: () => { void auth0Logout({ logoutParams: { returnTo: window.location.origin } }); },
     getAccessToken: async () => { try { return (await getAccessTokenSilently()) ?? null; } catch { return null; } },
     hasPermission: (permission) => permissionsFor(user?.role, permission),
-  }), [getAccessTokenSilently, isAuthenticated, isLoading, loginWithRedirect, auth0Logout, user]);
+    requestStepUp: (returnTo) => loginWithRedirect({
+      appState: { returnTo: `${returnTo}?step_up=returned` },
+      authorizationParams: { acr_values: mfaAcr, max_age: 0, prompt: 'login' },
+    }),
+    hasFreshMfa: (requestedAt) => hasFreshMfaClaim(auth0User, requestedAt),
+  }), [auth0User, getAccessTokenSilently, isAuthenticated, isLoading, loginWithRedirect, auth0Logout, user]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

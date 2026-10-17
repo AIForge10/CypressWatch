@@ -1,4 +1,4 @@
-import { StrictMode, Suspense, lazy, useEffect, useState } from 'react';
+import { StrictMode, Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Map, { Marker, NavigationControl, Popup } from 'react-map-gl/maplibre';
@@ -106,14 +106,15 @@ function initialMockBeaconAlert(site: Site | undefined): BeaconAlertSnapshot {
   };
 }
 
-function SiteBeacon({ site, active, secondsLeft, strikeCount, strikeAnimationId, onStrike, onPreviewAllClear }: {
+function SiteBeacon({ site, active, secondsLeft, strikeCount, strikeAnimationId, onStrike, onRequestAllClear, verificationMessage }: {
   site: Site;
   active: boolean;
   secondsLeft: number;
   strikeCount: number;
   strikeAnimationId: number;
   onStrike: () => void;
-  onPreviewAllClear: () => void;
+  onRequestAllClear: () => void;
+  verificationMessage: string | null;
 }) {
   const countdown = `${String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:${String(secondsLeft % 60).padStart(2, '0')}`;
   const weather = site.primaryHazards.includes('Lightning') ? 'storm' : site.primaryHazards.some((hazard) => hazard === 'Flooding' || hazard === 'Soil saturation') ? 'overcast' : 'sunny';
@@ -135,7 +136,8 @@ function SiteBeacon({ site, active, secondsLeft, strikeCount, strikeAnimationId,
         <div className="cw-beacon-timer" aria-live="off">{active ? countdown : '00:00'}</div>
         <div className="cw-beacon-progress" role="progressbar" aria-label="Demo stop-work countdown" aria-valuemin={0} aria-valuemax={STOP_WORK_SECONDS} aria-valuenow={secondsLeft}><span style={{ width: `${(secondsLeft / STOP_WORK_SECONDS) * 100}%` }} /></div>
         <p className="cw-beacon-message" role="status">{active ? 'Work remains paused. A new strike within 10 miles resets the 30-minute timer.' : 'Demo lightning all-clear. Other site hazards still need review; a new strike returns this beacon to stop-work.'}</p>
-        <div className="cw-beacon-actions"><Button onClick={onStrike}>Simulate lightning strike</Button>{active && <Button variant="quiet" onClick={onPreviewAllClear}>Preview all-clear</Button>}</div>
+        <div className="cw-beacon-actions"><Button onClick={onStrike}>Simulate lightning strike</Button>{active && <Button variant="quiet" onClick={onRequestAllClear}>Request early all-clear</Button>}</div>
+        {verificationMessage && <p className="cw-step-up-feedback" role="status">{verificationMessage}</p>}
         <p className="cw-beacon-disclaimer">Visualization only. Strike distances and locations are illustrative, not geographic scale. Weather is inferred from mock site hazards; strikes and status do not authorize field work.</p>
       </div>
     </div>
@@ -144,15 +146,26 @@ function SiteBeacon({ site, active, secondsLeft, strikeCount, strikeAnimationId,
 
 function SiteDetail() {
   const { siteId } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isMockAuth, requestStepUp, hasFreshMfa } = useAuth();
   const site = sites.find((item) => item.id === siteId);
   const detail = siteId ? siteDetailData[siteId] : undefined;
   const [beaconAlert, setBeaconAlert] = useState<BeaconAlertSnapshot>(() => initialMockBeaconAlert(site));
   const [strikeAnimationId, setStrikeAnimationId] = useState(0);
   const [now, setNow] = useState(Date.now);
+  const [stepUpOpen, setStepUpOpen] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
+  const [stepUpPending, setStepUpPending] = useState(false);
+  const lastSiteId = useRef(siteId);
+  const processingStepUp = useRef(false);
   useEffect(() => {
+    if (lastSiteId.current === siteId) return;
+    lastSiteId.current = siteId;
     setBeaconAlert(initialMockBeaconAlert(site));
     setStrikeAnimationId(0);
     setNow(Date.now());
+    setVerificationMessage(null);
   }, [siteId]);
   useEffect(() => {
     const stopWorkUntil = beaconAlert.stopWorkUntil;
@@ -164,6 +177,26 @@ function SiteDetail() {
     }, 1000);
     return () => window.clearInterval(interval);
   }, [beaconAlert.stopWorkUntil]);
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('step_up') !== 'returned' || !siteId) {
+      processingStepUp.current = false;
+      return;
+    }
+    if (processingStepUp.current) return;
+    processingStepUp.current = true;
+    const rawRequest = sessionStorage.getItem('cypresswatch-step-up-preview');
+    sessionStorage.removeItem('cypresswatch-step-up-preview');
+    navigate(location.pathname, { replace: true });
+    let request: { siteId: string; requestedAt: number } | null = null;
+    try { request = rawRequest ? JSON.parse(rawRequest) : null; } catch { /* Invalid state fails closed. */ }
+    if (request?.siteId === siteId && Date.now() - request.requestedAt < 5 * 60 * 1000 && hasFreshMfa(request.requestedAt)) {
+      setBeaconAlert((previous) => ({ ...previous, stopWorkUntil: null }));
+      setNow(Date.now());
+      setVerificationMessage('Auth0 MFA completed. Demo all-clear preview shown; no live alert was changed.');
+    } else {
+      setVerificationMessage('MFA was not confirmed. Stop-work remains active. Ask an admin to enable the step-up MFA Action in Auth0.');
+    }
+  }, [hasFreshMfa, location.pathname, location.search, navigate, siteId]);
   if (!site) return <Placeholder title="Site not found" description="This site is not available in the current assignment." />;
   const secondsLeft = beaconAlert.stopWorkUntil === null ? 0 : Math.max(0, Math.ceil((beaconAlert.stopWorkUntil - now) / 1000));
   const active = secondsLeft > 0;
@@ -174,11 +207,40 @@ function SiteDetail() {
     setBeaconAlert((previous) => ({ ...previous, lastStrikeAt: strikeTime, stopWorkUntil: strikeTime + STOP_WORK_SECONDS * 1000, strikeCount: previous.strikeCount + 1 }));
     setStrikeAnimationId((previous) => previous + 1);
     setNow(strikeTime);
+    setVerificationMessage(null);
+  };
+  const verifyWithAuth0 = async () => {
+    if (!siteId || isMockAuth) return;
+    setStepUpPending(true);
+    sessionStorage.setItem('cypresswatch-step-up-preview', JSON.stringify({ siteId, requestedAt: Date.now() }));
+    try {
+      await requestStepUp(`/app/supervisor/sites/${siteId}`);
+    } catch {
+      sessionStorage.removeItem('cypresswatch-step-up-preview');
+      setVerificationMessage('Auth0 verification could not start. Stop-work remains active.');
+      setStepUpOpen(false);
+      setStepUpPending(false);
+    }
+  };
+  const previewVerifiedResult = () => {
+    setBeaconAlert((previous) => ({ ...previous, stopWorkUntil: null }));
+    setNow(Date.now());
+    setStepUpOpen(false);
+    setVerificationMessage('Demo-only verified outcome shown. No MFA completed and no live alert was changed.');
   };
   return <div>
     <PageHeader eyebrow="Site risk detail" title={site.name} description={`${site.location} · Last updated ${site.lastUpdated}`} actions={<Link to="/app/supervisor" className="cw-button cw-button-secondary">Back to overview</Link>} />
     {active && <StopWorkBanner site={alertSite} demo />}
-    <SiteBeacon site={site} active={active} secondsLeft={secondsLeft} strikeCount={beaconAlert.strikeCount} strikeAnimationId={strikeAnimationId} onStrike={simulateStrike} onPreviewAllClear={() => { setBeaconAlert((previous) => ({ ...previous, stopWorkUntil: null })); setNow(Date.now()); }} />
+    <SiteBeacon site={site} active={active} secondsLeft={secondsLeft} strikeCount={beaconAlert.strikeCount} strikeAnimationId={strikeAnimationId} onStrike={simulateStrike} onRequestAllClear={() => setStepUpOpen(true)} verificationMessage={verificationMessage} />
+    {stepUpOpen && <div className="cw-step-up-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setStepUpOpen(false); }}><div className="cw-step-up-dialog" role="dialog" aria-modal="true" aria-labelledby="cw-step-up-title">
+      <p className="cw-eyebrow">Supervisor approval · Demo</p>
+      <h2 id="cw-step-up-title">Early all-clear requires step-up MFA</h2>
+      <p>Before clearing a stop-work alert early, the supervisor must confirm the site and complete a fresh Auth0 MFA challenge.</p>
+      <div className="cw-step-up-summary"><strong>{site.name}</strong><span>Lightning perimeter · {secondsLeft > 0 ? `${Math.floor(secondsLeft / 60)}m ${String(secondsLeft % 60).padStart(2, '0')}s` : 'Expired'} remaining</span></div>
+      <ol className="cw-step-up-steps"><li>Review the active hazard and site.</li><li>Reauthenticate with Auth0 and complete MFA.</li><li>Backend validates role, MFA freshness, alert state, and records the decision.</li></ol>
+      <p className="cw-step-up-warning">This screen only previews the interaction. It cannot authorize field work or change a backend alert.</p>
+      <div className="cw-step-up-actions"><Button variant="quiet" onClick={() => setStepUpOpen(false)}>Cancel</Button>{!isMockAuth && <Button onClick={() => { void verifyWithAuth0(); }} disabled={stepUpPending}>{stepUpPending ? 'Opening Auth0…' : 'Verify with Auth0'}</Button>}<Button variant="quiet" onClick={previewVerifiedResult}>Preview verified outcome (demo)</Button></div>
+    </div></div>}
     <div className="cw-detail-grid"><div>
       <Card className="cw-panel"><div className="cw-risk-hero"><div className="cw-risk-score-large">{site.riskScore.toFixed(1)}</div><div><Badge tone={riskTone(site.riskLevel)}>{site.riskLevel} risk</Badge><p className="cw-muted">Current hazard score out of 10</p></div></div><h2 style={{ marginTop: 26 }}>Why this score?</h2><p style={{ lineHeight: 1.6, marginBottom: 22 }}>{site.primaryHazards.length ? `${site.primaryHazards.join(' and ')} are driving the current score. Review the contributing evidence below before making an operational decision.` : 'No significant hazard contributors are currently reported.'}</p>{site.hazards.map((factor) => <div className="cw-factor" key={factor.type}><div><p className="cw-factor-label">{factor.label}</p><p className="cw-factor-meta">{factor.source} · Observed {factor.observedAt}</p></div><div className="cw-factor-value"><div>{factor.value}</div><Badge tone={riskTone(factor.severity)}>{factor.severity}</Badge></div></div>)}</Card>
       <Card className="cw-panel" style={{ marginTop: 20 }}><h2>Forecast drift</h2>{siteDetail.forecast.length ? <div className="cw-forecast">{siteDetail.forecast.map((point) => <div className="cw-forecast-point" key={point.time}><div className="cw-forecast-bar" style={{ height: `${Math.max(18, point.score * 10)}%` }}><span>{point.score.toFixed(1)}</span></div><strong>{point.time}</strong><small>{point.label}</small><p>{point.condition}</p></div>)}</div> : <p className="cw-muted">Forecast unavailable. This does not indicate safe conditions.</p>}</Card>
