@@ -1,31 +1,31 @@
 /* Shared design tokens (colors, spacing, type). M1 + M2 agree on changes here. */
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #17201c;
-  background: #f4f7f5;
+  font-family: "Open Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #353531;
+  background: #f4f8f8;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 
-  --cw-ink: #17201c;
-  --cw-muted: #617069;
-  --cw-subtle: #edf2ef;
+  --cw-ink: #353531;
+  --cw-muted: #656562;
+  --cw-subtle: #eef4f4;
   --cw-surface: #ffffff;
-  --cw-border: #d7e0da;
-  --cw-brand: #155d46;
-  --cw-brand-strong: #0d4433;
-  --cw-brand-soft: #e0f0e9;
-  --cw-danger: #b42318;
-  --cw-danger-soft: #fde9e7;
-  --cw-warning: #9a6700;
-  --cw-warning-soft: #fff4d6;
-  --cw-success: #217346;
-  --cw-success-soft: #e5f4ea;
-  --cw-info: #245b8f;
-  --cw-info-soft: #e7f1fb;
-  --cw-radius-sm: 8px;
-  --cw-radius-md: 12px;
-  --cw-radius-lg: 18px;
-  --cw-shadow-sm: 0 1px 2px rgb(23 32 28 / 7%);
+  --cw-border: #cbdde0;
+  --cw-brand: #cd533b;
+  --cw-brand-strong: #353531;
+  --cw-brand-soft: #9ac2c9;
+  --cw-danger: #cd533b;
+  --cw-danger-soft: #f8e4df;
+  --cw-warning: #cd533b;
+  --cw-warning-soft: #f8e4df;
+  --cw-success: #5b8f86;
+  --cw-success-soft: #e3eeee;
+  --cw-info: #5b858c;
+  --cw-info-soft: #eaf3f4;
+  --cw-radius-sm: 4px;
+  --cw-radius-md: 6px;
+  --cw-radius-lg: 8px;
+  --cw-shadow-sm: 0 1px 2px rgb(53 53 49 / 7%);
 }
 
 * { box-sizing: border-box; }

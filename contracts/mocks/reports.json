@@ -1,0 +1,57 @@
+{
+  "site_id": "site_012",
+  "reports": [
+    {
+      "report_id": "rpt_91c2",
+      "client_id": "8e1b6c34-2f0a-4c55-9d1e-6a0f3b7c2d11",
+      "site_id": "site_012",
+      "lat": 25.5512,
+      "lon": -80.6188,
+      "note": "Gator by the culvert next to pole 14",
+      "photo_url": "https://<vultr-bucket>/reports/rpt_91c2.jpg",
+      "captured_at": "2026-10-17T15:20:41Z",
+      "uploaded_at": "2026-10-17T15:44:02Z",
+      "reported_by": {
+        "user_id": "auth0|crew_014",
+        "name": "Jake Turner"
+      },
+      "triage": {
+        "hazard": "wildlife",
+        "severity": "high",
+        "description": "Large alligator about 10 feet from the work area, near standing water.",
+        "confidence": 0.86,
+        "model": "gemini"
+      },
+      "status": "pending_review",
+      "confirmed_hazard": null,
+      "confirmed_severity": null,
+      "ledger_record_id": null
+    },
+    {
+      "report_id": "rpt_88a0",
+      "client_id": "b3d2f6a1-77c9-4d2e-a4b0-91e5c3d8f702",
+      "site_id": "site_012",
+      "lat": 25.553,
+      "lon": -80.6211,
+      "note": "Access road flooded past the gate",
+      "photo_url": "https://<vultr-bucket>/reports/rpt_88a0.jpg",
+      "captured_at": "2026-10-17T12:05:10Z",
+      "uploaded_at": "2026-10-17T12:05:31Z",
+      "reported_by": {
+        "user_id": "auth0|crew_014",
+        "name": "Jake Turner"
+      },
+      "triage": {
+        "hazard": "flood",
+        "severity": "medium",
+        "description": "Standing water across the gravel access road, depth unclear.",
+        "confidence": 0.79,
+        "model": "gemini"
+      },
+      "status": "confirmed",
+      "confirmed_hazard": "flood",
+      "confirmed_severity": "medium",
+      "ledger_record_id": "rec_5502"
+    }
+  ]
+}

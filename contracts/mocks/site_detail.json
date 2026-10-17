@@ -1,0 +1,220 @@
+{
+  "server_time": "2026-10-17T18:42:10Z",
+  "site": {
+    "site_id": "site_012",
+    "name": "Sample Plant 12 (Everglades)",
+    "eia_plant_id": null,
+    "plant_type": "natural gas",
+    "county": "Miami-Dade",
+    "state": "FL",
+    "lat": 25.55,
+    "lon": -80.62,
+    "timezone": "America/New_York",
+    "hazard_score": 8.2,
+    "risk_level": "extreme",
+    "rank": 1,
+    "top_hazard": "lightning",
+    "stop_work": {
+      "active": true,
+      "reason": "lightning",
+      "last_strike_at": "2026-10-17T18:40:05Z",
+      "stop_work_until": "2026-10-17T19:10:05Z",
+      "strikes_last_30_min": 3,
+      "nearest_strike_miles": 4.2
+    },
+    "active_alert_count": 1,
+    "open_report_count": 2,
+    "updated_at": "2026-10-17T18:40:30Z",
+    "flood_zone": "AE",
+    "river_site": false,
+    "distance_to_river_miles": 6.8
+  },
+  "score": {
+    "hazard_score": 8.2,
+    "risk_level": "extreme",
+    "model_version": "hazard-index-v1",
+    "scored_at": "2026-10-17T18:40:30Z",
+    "top_factors": [
+      {
+        "feature": "strikes_within_10mi_1h",
+        "label": "3 lightning strikes within 10 miles",
+        "contribution": 2.4
+      },
+      {
+        "feature": "max_heat_index_f",
+        "label": "Heat index 108\u00b0F",
+        "contribution": 1.6
+      },
+      {
+        "feature": "soil_moisture_pct",
+        "label": "Soil 91% saturated",
+        "contribution": 0.9
+      },
+      {
+        "feature": "rain_7d_in",
+        "label": "4.8 in of rain this week",
+        "contribution": 0.6
+      }
+    ],
+    "explanation": "Site 12 is an 8.2 mainly because lightning is striking within 10 miles, with a 108\u00b0F heat index and soaked ground adding to the risk."
+  },
+  "hazards": [
+    {
+      "hazard": "lightning",
+      "level": "extreme",
+      "score": 9.5,
+      "summary": "3 strikes in 30 min, nearest 4.2 mi",
+      "value": 4.2,
+      "unit": "miles",
+      "source": "goes-glm",
+      "observed_at": "2026-10-17T18:40:05Z"
+    },
+    {
+      "hazard": "heat",
+      "level": "high",
+      "score": 7.4,
+      "summary": "Heat index 108\u00b0F",
+      "value": 108,
+      "unit": "\u00b0F",
+      "source": "open-meteo",
+      "observed_at": "2026-10-17T18:00:00Z"
+    },
+    {
+      "hazard": "soil_saturation",
+      "level": "high",
+      "score": 6.5,
+      "summary": "Soil 91% saturated; vehicles may get stuck",
+      "value": 91,
+      "unit": "%",
+      "source": "open-meteo",
+      "observed_at": "2026-10-17T18:00:00Z"
+    },
+    {
+      "hazard": "storm",
+      "level": "moderate",
+      "score": 5.2,
+      "summary": "Gusts to 34 mph possible",
+      "value": 34,
+      "unit": "mph",
+      "source": "nws",
+      "observed_at": "2026-10-17T17:55:00Z"
+    },
+    {
+      "hazard": "wildlife",
+      "level": "high",
+      "score": 6.0,
+      "summary": "Alligator reported 3 hours ago",
+      "value": 1,
+      "unit": "reports today",
+      "source": "crew-report",
+      "observed_at": "2026-10-17T15:44:02Z"
+    },
+    {
+      "hazard": "flood",
+      "level": "low",
+      "score": 2.1,
+      "summary": "No flood warning; not a river site",
+      "value": 0.4,
+      "unit": "in overnight",
+      "source": "open-meteo",
+      "observed_at": "2026-10-17T10:00:00Z"
+    },
+    {
+      "hazard": "wildfire",
+      "level": "low",
+      "score": 0.3,
+      "summary": "No active fires within 25 miles",
+      "value": null,
+      "unit": null,
+      "source": "nasa-firms",
+      "observed_at": "2026-10-17T18:10:00Z"
+    }
+  ],
+  "conditions": {
+    "temperature_f": 93,
+    "heat_index_f": 108,
+    "humidity_pct": 62,
+    "wind_gust_mph": 22,
+    "rain_24h_in": 0.6,
+    "rain_overnight_in": 0.4,
+    "soil_moisture_pct": 91,
+    "source": "open-meteo",
+    "observed_at": "2026-10-17T18:00:00Z"
+  },
+  "forecast_drift": {
+    "variable": "storm_probability_pct",
+    "valid_at": "2026-10-17T19:00:00Z",
+    "snapshots": [
+      {
+        "issued_at": "2026-10-17T11:00:00Z",
+        "value": 20
+      },
+      {
+        "issued_at": "2026-10-17T14:00:00Z",
+        "value": 35
+      },
+      {
+        "issued_at": "2026-10-17T17:00:00Z",
+        "value": 60
+      }
+    ],
+    "summary": "3 PM storm chance rose from 20% to 60% since 7 AM."
+  },
+  "best_work_window": {
+    "date": "2026-10-18",
+    "start_local": "06:00",
+    "end_local": "11:00",
+    "reason": "Heat index stays under 100\u00b0F and storm chance under 20% until 11 AM."
+  },
+  "active_alerts": [
+    {
+      "alert_id": "alt_7f3a",
+      "site_id": "site_012",
+      "type": "stop_work_lightning",
+      "severity": "stop_work",
+      "status": "active",
+      "title": "Stop work: lightning 4.2 miles away",
+      "message": "Lightning struck within 10 miles. Stop outdoor work and shelter. All clear at 3:10 PM if no new strikes.",
+      "started_at": "2026-10-17T18:21:47Z",
+      "stop_work_until": "2026-10-17T19:10:05Z",
+      "cleared_at": null,
+      "acknowledged_by": [],
+      "evidence": [
+        {
+          "source": "goes-glm",
+          "observed_at": "2026-10-17T18:40:05Z"
+        }
+      ],
+      "ledger_record_id": "rec_5521",
+      "simulated": false
+    }
+  ],
+  "recent_reports": [
+    {
+      "report_id": "rpt_91c2",
+      "client_id": "8e1b6c34-2f0a-4c55-9d1e-6a0f3b7c2d11",
+      "site_id": "site_012",
+      "lat": 25.5512,
+      "lon": -80.6188,
+      "note": "Gator by the culvert next to pole 14",
+      "photo_url": "https://<vultr-bucket>/reports/rpt_91c2.jpg",
+      "captured_at": "2026-10-17T15:20:41Z",
+      "uploaded_at": "2026-10-17T15:44:02Z",
+      "reported_by": {
+        "user_id": "auth0|crew_014",
+        "name": "Jake Turner"
+      },
+      "triage": {
+        "hazard": "wildlife",
+        "severity": "high",
+        "description": "Large alligator about 10 feet from the work area, near standing water.",
+        "confidence": 0.86,
+        "model": "gemini"
+      },
+      "status": "pending_review",
+      "confirmed_hazard": null,
+      "confirmed_severity": null,
+      "ledger_record_id": null
+    }
+  ]
+}

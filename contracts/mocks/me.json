@@ -1,0 +1,15 @@
+{
+  "user_id": "auth0|sup_001",
+  "name": "Maria Lopez",
+  "role": "supervisor",
+  "site_ids": [
+    "site_012",
+    "site_031",
+    "site_007",
+    "site_044",
+    "site_019",
+    "site_052"
+  ],
+  "language": "en",
+  "server_time": "2026-10-17T18:42:10Z"
+}

@@ -1,9 +1,10 @@
+import { Auth0Provider, useAuth0, type User as Auth0User } from '@auth0/auth0-react';
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 export type Role = 'supervisor' | 'crew' | 'owner';
 export type Permission = 'sites:read' | 'briefings:read' | 'reports:write' | 'ledger:read';
-export type MockUser = { id: string; name: string; email: string; role: Role; assignedSiteIds: string[] };
+export type MockUser = { id: string; name: string; email: string; role: Role | null; assignedSiteIds: string[] };
 
 const demoUsers: Record<Role, MockUser> = {
   supervisor: { id: 'demo-supervisor', name: 'Jordan Lee', email: 'supervisor@example.com', role: 'supervisor', assignedSiteIds: ['site-01', 'site-02'] },
@@ -14,6 +15,8 @@ const demoUsers: Record<Role, MockUser> = {
 type AuthContextValue = {
   user: MockUser | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
+  isMockAuth: boolean;
   login: (role?: Role) => void;
   logout: () => void;
   getAccessToken: () => Promise<string | null>;
@@ -22,41 +25,76 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 const storageKey = 'cypresswatch-demo-role';
+const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN;
+const auth0ClientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
+const auth0Audience = import.meta.env.VITE_AUTH0_AUDIENCE;
+const auth0RoleClaim = import.meta.env.VITE_AUTH0_ROLE_CLAIM ?? 'https://cypresswatch.app/role';
+const auth0SiteIdsClaim = import.meta.env.VITE_AUTH0_SITE_IDS_CLAIM ?? 'https://cypresswatch.app/site_ids';
+const auth0Configured = Boolean(auth0Domain && auth0ClientId);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+function roleFromClaim(value: unknown): Role | null {
+  if (value === 'supervisor' || value === 'crew' || value === 'owner') return value;
+  if (value === 'project_owner') return 'owner';
+  return null;
+}
+
+function auth0UserToAppUser(user: Auth0User | undefined): MockUser | null {
+  if (!user) return null;
+  const claims = user as Auth0User & Record<string, unknown>;
+  const role = roleFromClaim(claims[auth0RoleClaim] ?? claims.role);
+  const siteIds = claims[auth0SiteIdsClaim];
+  const assignedSiteIds = Array.isArray(siteIds) ? siteIds.filter((id): id is string => typeof id === 'string') : [];
+  return { id: user.sub ?? 'auth0-user', name: user.name ?? user.nickname ?? user.email ?? 'CypressWatch user', email: user.email ?? '', role, assignedSiteIds };
+}
+
+function permissionsFor(role: Role | null | undefined, permission: Permission) {
+  if (!role) return false;
+  if (permission === 'reports:write') return role === 'crew';
+  if (permission === 'ledger:read') return role === 'supervisor' || role === 'owner';
+  return true;
+}
+
+function MockAuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role | null>(() => {
     const savedRole = localStorage.getItem(storageKey);
     return savedRole === 'supervisor' || savedRole === 'crew' || savedRole === 'owner' ? savedRole : null;
   });
   const user = role ? demoUsers[role] : null;
   const value = useMemo<AuthContextValue>(() => ({
-    user,
-    isAuthenticated: Boolean(user),
+    user, isAuthenticated: Boolean(user), isLoading: false, isMockAuth: true,
     login: (nextRole = 'supervisor') => { localStorage.setItem(storageKey, nextRole); setRole(nextRole); },
     logout: () => { localStorage.removeItem(storageKey); setRole(null); },
     getAccessToken: async () => user ? 'mock-access-token' : null,
-    hasPermission: (permission) => {
-      if (!user) return false;
-      if (permission === 'reports:write') return user.role === 'crew';
-      return true;
-    },
+    hasPermission: (permission) => permissionsFor(user?.role, permission),
   }), [user]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used inside AuthProvider');
-  return context;
+function Auth0AuthProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  return <Auth0Provider domain={auth0Domain} clientId={auth0ClientId} authorizationParams={{ redirect_uri: window.location.origin, ...(auth0Audience ? { audience: auth0Audience } : {}) }} onRedirectCallback={(appState) => navigate(appState?.returnTo ?? '/app')}>
+    <Auth0ContextBridge>{children}</Auth0ContextBridge>
+  </Auth0Provider>;
 }
 
-export function RequireAuth() {
-  const { isAuthenticated } = useAuth();
-  const location = useLocation();
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" state={{ from: location }} replace />;
+function Auth0ContextBridge({ children }: { children: ReactNode }) {
+  const { user: auth0User, isAuthenticated, isLoading, loginWithRedirect, logout: auth0Logout, getAccessTokenSilently } = useAuth0();
+  const user = auth0UserToAppUser(auth0User);
+  const value = useMemo<AuthContextValue>(() => ({
+    user, isAuthenticated, isLoading, isMockAuth: false,
+    login: () => { void loginWithRedirect({ appState: { returnTo: '/app' } }); },
+    logout: () => { void auth0Logout({ logoutParams: { returnTo: window.location.origin } }); },
+    getAccessToken: async () => { try { return (await getAccessTokenSilently()) ?? null; } catch { return null; } },
+    hasPermission: (permission) => permissionsFor(user?.role, permission),
+  }), [getAccessTokenSilently, isAuthenticated, isLoading, loginWithRedirect, auth0Logout, user]);
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function RequireRole({ role }: { role: Role }) {
-  const { user } = useAuth();
-  return user?.role === role ? <Outlet /> : <Navigate to="/app" replace />;
+export function AuthProvider({ children }: { children: ReactNode }) {
+  return auth0Configured ? <Auth0AuthProvider>{children}</Auth0AuthProvider> : <MockAuthProvider>{children}</MockAuthProvider>;
 }
+
+export function useAuth() { const context = useContext(AuthContext); if (!context) throw new Error('useAuth must be used inside AuthProvider'); return context; }
+export function RequireAuth() { const { isAuthenticated, isLoading } = useAuth(); const location = useLocation(); if (isLoading) return <div className="cw-auth-loading">Checking authentication…</div>; return isAuthenticated ? <Outlet /> : <Navigate to="/login" state={{ from: location }} replace />; }
+export function RequireRole({ role }: { role: Role }) { const { user, isLoading } = useAuth(); if (isLoading) return <div className="cw-auth-loading">Checking access…</div>; return user?.role === role ? <Outlet /> : <Navigate to="/app" replace />; }
+export function AccessDenied() { return <div className="cw-auth-loading"><h1>Access restricted</h1><p>Your account does not have a CypressWatch role for this workspace.</p></div>; }
