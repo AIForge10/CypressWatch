@@ -1,0 +1,4 @@
+,ROC AUC,PR AUC,Brier
+Random forest,0.8876,0.3501,0.033
+LightGBM,0.8894,0.358,0.0326
+Baseline: month only,0.6645,0.065,0.0397
