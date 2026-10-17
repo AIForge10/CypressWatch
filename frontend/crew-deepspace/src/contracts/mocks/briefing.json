@@ -1,0 +1,77 @@
+{
+  "briefing_id": "brf_012_20261018",
+  "site_id": "site_012",
+  "for_date": "2026-10-18",
+  "generated_at": "2026-10-17T22:00:00Z",
+  "language": "en",
+  "available_languages": [
+    "en",
+    "es"
+  ],
+  "headline": "High risk tomorrow: start early and stop by 11 AM.",
+  "hazard_score_forecast": 7.6,
+  "risk_level": "high",
+  "best_work_window": {
+    "date": "2026-10-18",
+    "start_local": "06:00",
+    "end_local": "11:00",
+    "reason": "Heat index stays under 100\u00b0F and storm chance under 20% until 11 AM."
+  },
+  "items": [
+    {
+      "hazard": "lightning",
+      "level": "high",
+      "text": "Thunderstorms likely after 1 PM (70% chance). Any strike within 10 miles stops work for 30 minutes.",
+      "source_ids": [
+        "src_2"
+      ]
+    },
+    {
+      "hazard": "heat",
+      "level": "high",
+      "text": "Heat index reaches 106\u00b0F by 1 PM. Plan water and shade breaks every hour.",
+      "source_ids": [
+        "src_1"
+      ]
+    },
+    {
+      "hazard": "soil_saturation",
+      "level": "moderate",
+      "text": "Ground is still saturated from this week's rain. Expect mud; keep heavy vehicles on the gravel pad.",
+      "source_ids": [
+        "src_1"
+      ]
+    },
+    {
+      "hazard": "wildlife",
+      "level": "high",
+      "text": "A crew member reported an alligator by the culvert near pole 14 today. Keep clear of standing water.",
+      "source_ids": [
+        "src_3"
+      ]
+    }
+  ],
+  "missing_data": [],
+  "sources": [
+    {
+      "id": "src_1",
+      "source": "open-meteo",
+      "observed_at": "2026-10-17T21:00:00Z",
+      "description": "Hourly forecast for Oct 18"
+    },
+    {
+      "id": "src_2",
+      "source": "nws",
+      "observed_at": "2026-10-17T21:30:00Z",
+      "description": "NWS forecast for the site's area"
+    },
+    {
+      "id": "src_3",
+      "source": "crew-report",
+      "observed_at": "2026-10-17T15:44:02Z",
+      "description": "Report rpt_91c2"
+    }
+  ],
+  "disclaimer": "Decision support only. Follow your company's safety procedures and your supervisor's direction.",
+  "validated": true
+}
