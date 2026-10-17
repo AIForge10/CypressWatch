@@ -1,0 +1,3 @@
+# Solana Safety Ledger client: hashing, Merkle roots, devnet anchoring (M3).
+solana
+solders

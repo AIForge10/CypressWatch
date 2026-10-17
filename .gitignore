@@ -1,0 +1,49 @@
+# --- OS / editors ---
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# --- Secrets: never commit real env files ---
+.env
+.env.*
+!.env.example
+*.pem
+*-keypair.json
+id.json
+
+# --- Node ---
+node_modules/
+dist/
+dev-dist/
+*.tsbuildinfo
+.vite/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+*.egg-info/
+
+# --- Data & models (large files live in Vultr Object Storage, not git) ---
+backend/ml/data/raw/*
+backend/ml/data/processed/*
+!backend/ml/data/raw/.gitkeep
+!backend/ml/data/processed/.gitkeep
+backend/ml/models/*
+!backend/ml/models/.gitkeep
+backend/data/sites/*.xlsx
+backend/ai/evals/sample_images/*
+!backend/ai/evals/sample_images/.gitkeep
+
+# --- Solana / Anchor ---
+backend/ledger/program/target/
+backend/ledger/program/.anchor/
+backend/ledger/program/test-ledger/
+
+# --- Arduino ---
+hardware/site-beacon/firmware/build/

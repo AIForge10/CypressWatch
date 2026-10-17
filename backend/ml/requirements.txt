@@ -1,0 +1,13 @@
+# Hazard-index model: training, evals, SHAP (M3).
+pandas
+numpy
+pyarrow
+scikit-learn
+lightgbm
+xgboost
+shap
+matplotlib
+joblib
+httpx                    # Open-Meteo archive, NOAA downloads
+jupyterlab
+ipykernel

@@ -1,0 +1,11 @@
+# Ingestion workers, lightning/flood alert engines, 6 PM scheduler (M4).
+apscheduler<4
+httpx
+psycopg[binary,pool]
+python-dotenv
+xarray                   # GOES GLM lightning files are NetCDF
+netCDF4
+boto3                    # read GOES GLM from the public NOAA S3 bucket
+timezonefinder           # site time zone for the 6 PM local briefing
+pandas
+openpyxl                 # EIA-860M plant list is .xlsx

@@ -1,0 +1,5 @@
+# Gemini: 6 PM briefing (EN/ES), hazard-photo triage, score explanations (M3).
+google-genai
+pydantic
+pillow
+python-dotenv

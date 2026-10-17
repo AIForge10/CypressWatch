@@ -1,0 +1,27 @@
+{
+  "name": "cypresswatch",
+  "private": true,
+  "version": "0.0.0",
+  "description": "CypressWatch — hazard monitoring and stop-work alerts for Sperry PlanIT Control (SwampHacks XII)",
+  "workspaces": [
+    "supervisor",
+    "crew",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev:supervisor": "npm run dev -w @cypresswatch/supervisor",
+    "dev:crew": "npm run dev -w @cypresswatch/crew",
+    "dev:web": "concurrently -n supervisor,crew -c blue,green \"npm:dev:supervisor\" \"npm:dev:crew\"",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "format": "prettier --write \"{supervisor,crew,packages}/**/*.{ts,tsx,css}\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.5",
+    "prettier": "^3.9.10",
+    "typescript": "^7.0.2"
+  }
+}

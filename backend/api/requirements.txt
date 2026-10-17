@@ -1,0 +1,10 @@
+# FastAPI backend (M4). M1 owns app/auth, M2 owns the reports upload router.
+fastapi
+uvicorn[standard]
+pydantic-settings
+python-dotenv
+psycopg[binary,pool]     # Tiger Data / TimescaleDB (Postgres)
+httpx
+pyjwt[crypto]            # Auth0 access-token verification (JWKS)
+python-multipart         # photo uploads
+boto3                    # Vultr Object Storage (S3-compatible)

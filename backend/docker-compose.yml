@@ -1,0 +1,17 @@
+# Local TimescaleDB (+ PostGIS) that mirrors Tiger Data, so everyone can develop
+# offline without sharing one cloud database.  Start (from backend/): docker compose up -d
+name: cypresswatch
+services:
+  db:
+    image: timescale/timescaledb-ha:pg17
+    container_name: cypresswatch-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: cypresswatch
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/home/postgres/pgdata/data
+volumes:
+  pgdata:

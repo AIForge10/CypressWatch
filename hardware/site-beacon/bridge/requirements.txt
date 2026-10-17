@@ -1,0 +1,2 @@
+# Site Beacon serial bridge (optional, decided at hour 16).
+pyserial
