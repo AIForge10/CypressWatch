@@ -35,6 +35,8 @@ backend/ml/data/processed/*
 !backend/ml/data/raw/.gitkeep
 !backend/ml/data/processed/.gitkeep
 backend/ml/models/*
+!backend/ml/models/hazard_index_v1.txt
+!backend/ml/models/hazard_index_v1.meta.json
 !backend/ml/models/.gitkeep
 backend/data/sites/*.xlsx
 backend/ai/evals/sample_images/*
