@@ -85,6 +85,11 @@ export async function bumpAttempts(item: QueueItem): Promise<void> {
   await run(['queue'], 'readwrite', (tx) => tx.objectStore('queue').put({ ...item, attempts: item.attempts + 1 }))
 }
 
+/** Remove only this person's waiting items (and their photos). Other people on this phone keep theirs. */
+export async function clearQueueFor(userId: string | null): Promise<void> {
+  for (const item of await listQueue()) if (!item.owner_user_id || item.owner_user_id === userId) await removeItem(item)
+}
+
 export async function clearQueue(): Promise<void> {
   await run(['queue', 'photos'], 'readwrite', (tx) => {
     tx.objectStore('photos').clear()

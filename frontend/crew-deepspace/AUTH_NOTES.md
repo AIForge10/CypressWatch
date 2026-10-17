@@ -33,9 +33,11 @@ and the token getter in `src/lib/crewData.tsx`.
    crew / supervisor / project_owner. Needs a mapping table on the backend.
 3. **Which site is this person on?** Not built. Everyone sees the sample site. Needs a
    user -> site assignment from the backend.
-4. **Login methods:** only Google right now. GitHub is a one-word change in
-   `SignedOutPanel.tsx` and `CrewShell.tsx` (`providers={['google','github']}`).
-   No email/password or phone-number login for crews.
+4. **Login methods:** only Google. The app has its own sign-in button that goes straight to
+   `/api/auth/social-redirect?provider=google` (`startGoogleSignIn` in `src/lib/access.tsx`), because
+   the DeepSpace sign-in box also shows an email/password form that cannot create accounts.
+   Adding GitHub means adding a second button that uses `provider=github`.
+   If crews won't all have Google accounts, the team needs another sign-in method.
 5. **Sign out with no signal:** the phone forgets the person locally, but the server session
    stays valid until it expires. Signing in again needs signal.
 

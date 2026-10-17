@@ -92,3 +92,17 @@ it does and what is still open. To test after redeploying:
 3. Turn on airplane mode and reload: the app should still open, with a yellow "Sign-in not re-checked yet" note.
 4. Turn airplane mode off, wait a few seconds: the note should go away.
 5. Tap the sign-out button (top right): you should see the sign-in panel again.
+
+
+---
+
+## Update: live sync (two-phone test)
+
+You need two phones, or a phone and a laptop, signed in with two different Google accounts.
+1. Open the site on both. In **Demo controls** on the Site tab, both should say "Live link to other phones: connected".
+2. On phone A tap **Simulate a lightning strike**. Phone B's countdown should jump to about 30:00 within a few seconds.
+3. On phone B tap **I have stopped work**. Phone A should show "1 confirmed stopped: (B's name)".
+4. On phone A send a hazard report. Phone B's **Map** tab should show it.
+5. Put phone B in airplane mode, tap **I have stopped work** on a new strike, then turn signal back on. Phone A should see it.
+6. Tap **Reset demo** on either phone. Both countdowns should leave the simulated strike.
+Read `SYNC_NOTES.md` for what is and is not shared.

@@ -45,36 +45,46 @@
   --color-shell-panel: #ffffff;
 }
 
-/* Cypress: CypressWatch's field theme. Light and high-contrast on purpose,
- * because crews read this outdoors in direct sun. */
+/* Cypress: CypressWatch's theme. Colors, radii and type copy the supervisor app's shared
+ * tokens (frontend/packages/ui/src/tokens.css, the --cw-* values) so both apps look like one product.
+ * Where the crew phone needs more (sunlight, gloves), it keeps stronger focus rings and bigger targets. */
 [data-theme="cypress"] {
   color-scheme: light;
-  --color-background: #f2f6f1;
-  --color-foreground: #0f1b14;
-  --color-card: #ffffff;
-  --color-card-foreground: #0f1b14;
+  --color-background: #edf2ef;          /* --cw-subtle */
+  --color-foreground: #17201c;          /* --cw-ink */
+  --color-card: #ffffff;                /* --cw-surface */
+  --color-card-foreground: #17201c;
   --color-popover: #ffffff;
-  --color-popover-foreground: #0f1b14;
-  --color-primary: #1f5e3b;
+  --color-popover-foreground: #17201c;
+  --color-primary: #155d46;             /* --cw-brand */
   --color-primary-foreground: #ffffff;
-  --color-secondary: #e3ebe2;
-  --color-secondary-foreground: #0f1b14;
-  --color-muted: #e3ebe2;
-  --color-muted-foreground: #3b4a41;
-  --color-accent: #d4e2d3;
-  --color-accent-foreground: #0f1b14;
-  --color-destructive: #c0152a;
+  --color-secondary: #edf2ef;
+  --color-secondary-foreground: #17201c;
+  --color-muted: #edf2ef;
+  --color-muted-foreground: #617069;    /* --cw-muted */
+  --color-accent: #e0f0e9;              /* --cw-brand-soft */
+  --color-accent-foreground: #0d4433;   /* --cw-brand-strong */
+  --color-destructive: #b42318;         /* --cw-danger */
   --color-destructive-foreground: #ffffff;
-  --color-border: #9fb2a4;
-  --color-input: #9fb2a4;
-  --color-ring: #0f1b14;
-  --radius: 0.875rem;
-  --shadow-card: none;
-  --shadow-card-hover: none;
-  --color-shell: #e3ebe2;
+  --color-border: #d7e0da;              /* --cw-border */
+  --color-input: #7f9187;               /* darker than M1's border: form fields need 3:1 against white */
+  --color-ring: #0d4433;                /* darker than M1's focus ring so it shows in sunlight */
+  --color-success: #217346;             /* --cw-success */
+  --color-success-foreground: #ffffff;
+  --color-success-soft: #e5f4ea;
+  --color-danger-soft: #fde9e7;
+  --color-caution: #fff4d6;             /* --cw-warning-soft */
+  --color-caution-foreground: #17201c;
+  --color-brand-strong: #0d4433;
+  --color-brand-soft: #e0f0e9;
+  --radius: 0.5rem;                     /* rounded-lg 8px = --cw-radius-sm, rounded-xl 12px = --cw-radius-md */
+  --shadow-card: 0 1px 2px rgb(23 32 28 / 7%);   /* --cw-shadow-sm */
+  --shadow-card-hover: 0 1px 2px rgb(23 32 28 / 7%);
+  --color-shell: #edf2ef;
   --color-shell-panel: #ffffff;
 }
 [data-theme="cypress"] body {
-  font-family: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  text-rendering: optimizeLegibility;
 }
 :focus-visible { outline: 3px solid var(--color-ring); outline-offset: 2px; }

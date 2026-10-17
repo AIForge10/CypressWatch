@@ -7,18 +7,31 @@
  */
 import type { Alert, SiteDetail } from '../contracts/types'
 
+// Kept per site, so resetting or striking one site never changes another site's clock.
 const OFFSET_KEY = 'cw:demo-offset'
 const STRIKE_KEY = 'cw:demo-strike'
+const offsetKey = (site: string) => `${OFFSET_KEY}:${site}`
+const strikeKey = (site: string) => `${STRIKE_KEY}:${site}`
 const ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 const DAY = 86_400_000
 
-export function demoOffsetMs(mockServerTime: string): number {
+export function demoOffsetMs(mockServerTime: string, sharedStart: number | undefined, site: string): number {
+  // Live sync: every phone starts the sample world at the same shared moment, so their timers agree.
+  if (sharedStart) {
+    const offset = sharedStart - Date.parse(mockServerTime)
+    try {
+      localStorage.setItem(offsetKey(site), String(offset))
+    } catch {
+      /* ignore */
+    }
+    return offset
+  }
   try {
-    const stored = localStorage.getItem(OFFSET_KEY)
+    const stored = localStorage.getItem(offsetKey(site))
     if (stored) return Number(stored)
     const offset = Date.now() - Date.parse(mockServerTime)
-    localStorage.setItem(OFFSET_KEY, String(offset))
+    localStorage.setItem(offsetKey(site), String(offset))
     return offset
   } catch {
     return Date.now() - Date.parse(mockServerTime)
@@ -41,18 +54,35 @@ export function shiftTimes<V>(value: V, offset: number): V {
   return walk(value) as V
 }
 
-export function recordSimulatedStrike(at: number): void {
+export function readSimulatedStrike(site: string): number | null {
   try {
-    localStorage.setItem(STRIKE_KEY, String(at))
+    const v = localStorage.getItem(strikeKey(site))
+    return v ? Number(v) : null
+  } catch {
+    return null
+  }
+}
+
+export function clearSimulatedStrike(site: string): void {
+  try {
+    localStorage.removeItem(strikeKey(site))
   } catch {
     /* ignore */
   }
 }
 
-export function resetDemoStorage(): void {
+export function recordSimulatedStrike(at: number, site: string): void {
   try {
-    // Every saved demo value (per-person cache, confirmations, reports, clocks), but not who is signed in.
-    for (const k of Object.keys(localStorage)) if (k.startsWith('cw:') && k !== 'cw:auth-hint') localStorage.removeItem(k)
+    localStorage.setItem(strikeKey(site), String(at))
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Forget this site's saved demo values on this phone (clock, strike). Other sites and other people are untouched. */
+export function resetDemoStorage(site: string, personalKeys: string[]): void {
+  try {
+    for (const k of [offsetKey(site), strikeKey(site), ...personalKeys]) localStorage.removeItem(k)
   } catch {
     /* ignore */
   }
@@ -62,7 +92,7 @@ export function resetDemoStorage(): void {
 export function applySimulatedStrike(detail: SiteDetail, alerts: Alert[]): { detail: SiteDetail; alerts: Alert[] } {
   let at: number | null = null
   try {
-    const v = localStorage.getItem(STRIKE_KEY)
+    const v = localStorage.getItem(strikeKey(detail.site.site_id))
     at = v ? Number(v) : null
   } catch {
     at = null

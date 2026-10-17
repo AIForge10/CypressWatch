@@ -13,7 +13,7 @@ export default function MapPage() {
   const now = useNow(30_000)
   if (!detail) {
     return (
-      <Screen title="Hazard map">
+      <Screen title="Hazard map" eyebrow="Reports near you">
         <Message>The map is not loaded yet.</Message>
       </Screen>
     )
@@ -30,18 +30,18 @@ export default function MapPage() {
   const feet = Math.round(span * 364_000) // degrees of latitude to feet, rounded
 
   return (
-    <Screen title="Hazard map">
+    <Screen title="Hazard map" eyebrow="Reports near you">
       <Card className="p-2">
         <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={`Map of hazard reports around ${detail.site.name}`} className="w-full rounded-lg bg-secondary">
-          <line x1={SIZE / 2} y1="0" x2={SIZE / 2} y2={SIZE} stroke="#9fb2a4" strokeWidth="1" />
-          <line x1="0" y1={SIZE / 2} x2={SIZE} y2={SIZE / 2} stroke="#9fb2a4" strokeWidth="1" />
-          <rect x={SIZE / 2 - 9} y={SIZE / 2 - 9} width="18" height="18" fill="#1f5e3b" stroke="#0f1b14" strokeWidth="2" />
-          <text x={SIZE / 2} y={SIZE / 2 + 28} textAnchor="middle" fontSize="13" fontWeight="700" fill="#0f1b14">Site center</text>
+          <line x1={SIZE / 2} y1="0" x2={SIZE / 2} y2={SIZE} stroke="#b9c7be" strokeWidth="1" />
+          <line x1="0" y1={SIZE / 2} x2={SIZE} y2={SIZE / 2} stroke="#b9c7be" strokeWidth="1" />
+          <rect x={SIZE / 2 - 9} y={SIZE / 2 - 9} width="18" height="18" fill="#155d46" stroke="#17201c" strokeWidth="2" />
+          <text x={SIZE / 2} y={SIZE / 2 + 28} textAnchor="middle" fontSize="13" fontWeight="700" fill="#17201c">Site center</text>
           {reports.map((r, i) => {
             const p = xy(r.lat, r.lon)
             return (
               <g key={r.report_id}>
-                <circle cx={p.x} cy={p.y} r="13" fill="#c0152a" stroke="#fff" strokeWidth="2" />
+                <circle cx={p.x} cy={p.y} r="13" fill="#b42318" stroke="#fff" strokeWidth="2" />
                 <text x={p.x} y={p.y + 5} textAnchor="middle" fontSize="14" fontWeight="700" fill="#fff">{i + 1}</text>
               </g>
             )
@@ -50,8 +50,8 @@ export default function MapPage() {
             const p = xy(w.lat, w.lon)
             return (
               <g key={w.client_id}>
-                <circle cx={p.x} cy={p.y} r="13" fill="#fff" stroke="#c0152a" strokeWidth="3" strokeDasharray="4 3" />
-                <text x={p.x} y={p.y + 5} textAnchor="middle" fontSize="14" fontWeight="700" fill="#c0152a">{`W${i + 1}`}</text>
+                <circle cx={p.x} cy={p.y} r="13" fill="#fff" stroke="#b42318" strokeWidth="3" strokeDasharray="4 3" />
+                <text x={p.x} y={p.y + 5} textAnchor="middle" fontSize="14" fontWeight="700" fill="#b42318">{`W${i + 1}`}</text>
               </g>
             )
           })}

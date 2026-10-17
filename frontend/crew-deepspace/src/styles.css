@@ -58,6 +58,12 @@
   --color-warning-foreground: #ffffff;
   --color-info: #3b82f6;
   --color-info-foreground: #ffffff;
+  --color-success-soft: #e5f4ea;
+  --color-danger-soft: #fde9e7;
+  --color-caution: #fef3c7;
+  --color-caution-foreground: #1f2937;
+  --color-brand-strong: #0d4433;
+  --color-brand-soft: #e0f0e9;
 
   /*
    * Shadows — slate (default). Each theme in themes.css tunes these.

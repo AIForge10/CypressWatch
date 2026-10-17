@@ -8,14 +8,14 @@ export default function BriefingPage() {
 
   if (!briefing) {
     return (
-      <Screen title="Tomorrow's briefing">
+      <Screen title="Tomorrow's briefing" eyebrow="Plan ahead">
         <Message>No briefing yet. The next-day safety briefing is written each evening at 6 PM, site time.</Message>
       </Screen>
     )
   }
   const win = briefing.best_work_window
   return (
-    <Screen title="Tomorrow's briefing">
+    <Screen title="Tomorrow's briefing" eyebrow="Plan ahead">
       <Card>
         <div className="flex items-start justify-between gap-3">
           <div className="text-sm font-bold">{dayLabel(briefing.for_date)}</div>
@@ -24,7 +24,7 @@ export default function BriefingPage() {
         <p className="mt-2 text-xl font-bold leading-snug">{briefing.headline}</p>
         <p className="mt-1 text-base">Forecast hazard score {briefing.hazard_score_forecast.toFixed(1)} / 10</p>
         {win && (
-          <div className="mt-3 rounded-xl border-2 border-border bg-secondary p-3">
+          <div className="mt-3 rounded-xl border border-border bg-secondary p-3">
             <div className="text-sm font-bold">Best work window</div>
             <div className="text-2xl font-bold">{hhmm(win.start_local)} to {hhmm(win.end_local)} {tzAbbrev(tz)}</div>
             <p className="text-base">{win.reason}</p>
@@ -47,7 +47,7 @@ export default function BriefingPage() {
           ))}
         </ul>
         {briefing.missing_data.length > 0 && (
-          <p className="mt-2 rounded-md bg-warning px-2 py-1 text-base font-bold">Missing data: {briefing.missing_data.join(', ')}</p>
+          <p className="mt-2 rounded-lg bg-caution px-2 py-1 text-base font-bold">Missing data: {briefing.missing_data.join(', ')}</p>
         )}
       </Card>
 

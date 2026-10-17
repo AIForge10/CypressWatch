@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CircleCheck, Clock, FlaskConical, OctagonAlert, WifiOff } from 'lucide-react'
+import { CircleCheck, Clock, FlaskConical, OctagonAlert, Wifi, WifiOff } from 'lucide-react'
 import { Screen, Card, LevelBadge, HazardName, BigButton, Message } from '../../components/ui-bits'
 import { USE_MOCKS, useCrew } from '../../lib/crewData'
 import { useFreshness } from '../../lib/freshness'
@@ -20,7 +20,7 @@ export default function SitePage() {
 
   const { site, score, hazards, conditions } = detail
   return (
-    <Screen title={site.name}>
+    <Screen title={site.name} eyebrow="Your site">
       <Countdown />
       <Card>
         <div className="flex items-start justify-between gap-3">
@@ -107,7 +107,7 @@ function Countdown() {
 
   if (running) {
     return (
-      <section data-testid="countdown" aria-live="off" className="rounded-xl border-4 border-[#7a0c1b] bg-destructive p-5 text-destructive-foreground">
+      <section data-testid="countdown" aria-live="off" className="rounded-xl border-4 border-[#721c16] bg-destructive p-5 text-destructive-foreground">
         <div className="flex items-center gap-2 text-2xl font-bold">
           <OctagonAlert className="h-8 w-8" aria-hidden /> STOP WORK
         </div>
@@ -120,27 +120,33 @@ function Countdown() {
           <p className="mt-1 text-base">Nearest strike {detail.site.stop_work.nearest_strike_miles} miles away. {detail.site.stop_work.strikes_last_30_min} strikes in the last 30 minutes.</p>
         )}
         {activeAlert?.simulated && (
-          <p className="mt-2 flex items-center gap-2 rounded-md bg-white px-2 py-1 text-base font-bold text-[#7a0c1b]">
+          <p className="mt-2 flex items-center gap-2 rounded-lg bg-white px-2 py-1 text-base font-bold text-[#721c16]">
             <FlaskConical className="h-4 w-4" aria-hidden /> Simulated strike (demo)
           </p>
         )}
         {!online && (
-          <p className="mt-2 flex items-center gap-2 rounded-md bg-white px-2 py-1 text-base font-bold text-[#7a0c1b]">
+          <p className="mt-2 flex items-center gap-2 rounded-lg bg-white px-2 py-1 text-base font-bold text-[#721c16]">
             <WifiOff className="h-4 w-4" aria-hidden /> No signal. This clock keeps running, but new strikes will not show until signal returns.
+          </p>
+        )}
+        {crew.ackedBy.length > 0 && (
+          <p data-testid="acked-by" className="mt-3 flex items-start gap-2 text-base font-bold">
+            <CircleCheck className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+            <span>{crew.ackedBy.length} confirmed stopped: {crew.ackedBy.map((a) => a.user_name || 'A crew member').join(', ')}</span>
           </p>
         )}
         {activeAlert && (
           <div className="mt-4">
             {ackAt ? (
               <p className="flex items-center gap-2 rounded-xl bg-white p-3 text-lg font-bold text-[#0f1b14]">
-                <CircleCheck className="h-6 w-6 text-[#14663a]" aria-hidden />
+                <CircleCheck className="h-6 w-6 text-success" aria-hidden />
                 You confirmed at {clock(ackAt, tz)}{ackWaiting ? '. Sends when signal returns.' : ''}
               </p>
             ) : (
               <button
                 type="button"
                 onClick={() => void crew.acknowledge(activeAlert.alert_id)}
-                className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-white text-lg font-bold text-[#7a0c1b]"
+                className="flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-white text-lg font-bold text-[#721c16]"
               >
                 I have stopped work
               </button>
@@ -153,14 +159,14 @@ function Countdown() {
 
   if (everStopped && stopWorkUntil) {
     return (
-      <section data-testid="countdown" className="rounded-xl border-4 border-[#0d4a2a] bg-[#14663a] p-5 text-white">
+      <section data-testid="countdown" className="rounded-xl border-4 border-[#14502f] bg-success p-5 text-white">
         <div className="flex items-center gap-2 text-2xl font-bold">
           <CircleCheck className="h-8 w-8" aria-hidden /> Countdown finished
         </div>
         <p className="mt-2 text-lg">
           Last strike {ago(detail.site.stop_work.last_strike_at ?? stopWorkUntil, now)}. The 30 minutes ended at {clock(stopWorkUntil, tz)} {tzAbbrev(tz)}.
         </p>
-        <p className="mt-2 flex items-start gap-2 rounded-md bg-white px-2 py-1.5 text-base font-bold text-[#0f1b14]">
+        <p className="mt-2 flex items-start gap-2 rounded-lg bg-white px-2 py-1.5 text-base font-bold text-[#0f1b14]">
           <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           {online ? 'Wait for your supervisor to say work can restart.' : 'No signal, so new strikes cannot be seen. Check with your supervisor before restarting work.'}
         </p>
@@ -169,7 +175,7 @@ function Countdown() {
   }
 
   return (
-    <section data-testid="countdown" className="rounded-xl border-4 border-[#0d4a2a] bg-[#14663a] p-5 text-white">
+    <section data-testid="countdown" className="rounded-xl border-4 border-[#14502f] bg-success p-5 text-white">
       <div className="flex items-center gap-2 text-2xl font-bold">
         <CircleCheck className="h-8 w-8" aria-hidden /> No stop-work right now
       </div>
@@ -181,25 +187,35 @@ function Countdown() {
 function DemoControls() {
   const crew = useCrew()
   const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<'shared' | 'local' | null>(null)
   return (
     <Card className="border-dashed">
       <h2 className="flex items-center gap-2 text-lg font-bold">
         <FlaskConical className="h-5 w-5" aria-hidden /> Demo controls (simulated)
       </h2>
-      <p className="mb-3 mt-1 text-sm">Only shown in demo mode. Nothing here touches real conditions.</p>
+      <p className="mb-3 mt-1 text-sm">Only shown in demo mode. Nothing here touches real conditions. A simulated strike starts the countdown on every signed-in phone.</p>
+      <p data-testid="sync-status" className="mb-3 flex items-center gap-2 text-sm font-bold">
+        {crew.syncReady ? <Wifi className="h-4 w-4" aria-hidden /> : <WifiOff className="h-4 w-4" aria-hidden />}
+        {crew.syncReady ? 'Live link to other phones: connected' : 'Live link to other phones: not connected'}
+      </p>
       <div className="flex flex-col gap-3">
         <BigButton
           disabled={busy}
           onClick={async () => {
             setBusy(true)
-            await crew.simulateStrike()
+            setResult(await crew.simulateStrike())
             setBusy(false)
           }}
         >
           Simulate a lightning strike
         </BigButton>
-        <button type="button" onClick={() => void crew.resetDemo()} className="min-h-12 w-full rounded-xl border-2 border-border bg-card text-base font-bold">
-          Reset demo
+        {result && (
+          <p data-testid="strike-result" role="status" className="rounded-lg bg-caution px-2 py-1.5 text-base font-bold text-foreground">
+            {result === 'shared' ? 'Sent to every phone.' : 'Only on this phone. No live link right now, so other phones did not get it.'}
+          </p>
+        )}
+        <button type="button" onClick={() => void crew.resetDemo()} className="min-h-12 w-full rounded-lg border border-input bg-card text-base font-bold">
+          Reset demo (clears it for everyone at your site)
         </button>
       </div>
     </Card>
