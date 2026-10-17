@@ -1,0 +1,111 @@
+[
+  {
+    "event_id": "evt_0001",
+    "type": "stop_work_started",
+    "site_id": "site_012",
+    "occurred_at": "2026-10-17T18:21:47Z",
+    "simulated": false,
+    "data": {
+      "alert_id": "alt_7f3a",
+      "strike_at": "2026-10-17T18:21:47Z",
+      "distance_miles": 7.9,
+      "stop_work_until": "2026-10-17T18:51:47Z"
+    }
+  },
+  {
+    "event_id": "evt_0002",
+    "type": "stop_work_extended",
+    "site_id": "site_012",
+    "occurred_at": "2026-10-17T18:40:05Z",
+    "simulated": false,
+    "data": {
+      "alert_id": "alt_7f3a",
+      "strike_at": "2026-10-17T18:40:05Z",
+      "distance_miles": 4.2,
+      "stop_work_until": "2026-10-17T19:10:05Z"
+    }
+  },
+  {
+    "event_id": "evt_0003",
+    "type": "alert_acknowledged",
+    "site_id": "site_012",
+    "occurred_at": "2026-10-17T18:43:02Z",
+    "simulated": false,
+    "data": {
+      "alert_id": "alt_7f3a",
+      "user_id": "auth0|crew_014",
+      "name": "Jake Turner"
+    }
+  },
+  {
+    "event_id": "evt_0004",
+    "type": "all_clear",
+    "site_id": "site_012",
+    "occurred_at": "2026-10-17T19:10:05Z",
+    "simulated": false,
+    "data": {
+      "alert_id": "alt_7f3a",
+      "reason": "30 minutes with no strikes within 10 miles"
+    }
+  },
+  {
+    "event_id": "evt_0005",
+    "type": "report_created",
+    "site_id": "site_012",
+    "occurred_at": "2026-10-17T15:44:02Z",
+    "simulated": false,
+    "data": {
+      "report_id": "rpt_91c2",
+      "hazard": "wildlife",
+      "severity": "high"
+    }
+  },
+  {
+    "event_id": "evt_0006",
+    "type": "report_confirmed",
+    "site_id": "site_012",
+    "occurred_at": "2026-10-17T15:50:30Z",
+    "simulated": false,
+    "data": {
+      "report_id": "rpt_91c2",
+      "confirmed_hazard": "wildlife",
+      "confirmed_severity": "high"
+    }
+  },
+  {
+    "event_id": "evt_0007",
+    "type": "score_updated",
+    "site_id": "site_012",
+    "occurred_at": "2026-10-17T18:40:30Z",
+    "simulated": false,
+    "data": {
+      "hazard_score": 8.2,
+      "risk_level": "extreme",
+      "previous_score": 7.4
+    }
+  },
+  {
+    "event_id": "evt_0008",
+    "type": "briefing_ready",
+    "site_id": "site_012",
+    "occurred_at": "2026-10-17T22:00:00Z",
+    "simulated": false,
+    "data": {
+      "briefing_id": "brf_012_20261018",
+      "for_date": "2026-10-18"
+    }
+  },
+  {
+    "event_id": "evt_0009",
+    "type": "stop_work_started",
+    "site_id": "site_007",
+    "occurred_at": "2026-10-17T18:44:00Z",
+    "simulated": true,
+    "data": {
+      "alert_id": "alt_demo_01",
+      "strike_at": "2026-10-17T18:44:00Z",
+      "distance_miles": 4.2,
+      "stop_work_until": "2026-10-17T19:14:00Z"
+    }
+  }
+]

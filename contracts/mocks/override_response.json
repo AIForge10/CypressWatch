@@ -1,0 +1,11 @@
+{
+  "alert_id": "alt_7f3a",
+  "status": "overridden",
+  "overridden_by": {
+    "user_id": "auth0|sup_001",
+    "name": "Maria Lopez",
+    "at": "2026-10-17T19:02:11Z"
+  },
+  "mfa_verified": true,
+  "ledger_record_id": "rec_5530"
+}

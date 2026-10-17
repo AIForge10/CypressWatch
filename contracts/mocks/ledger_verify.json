@@ -1,0 +1,17 @@
+{
+  "record_id": "rec_5521",
+  "record_type": "stop_work",
+  "site_id": "site_012",
+  "verified": true,
+  "computed_hash": "9f2c4e1ab7d03e55c6a8f1b2d4e7a9c0b3d5f7e9a1c3e5b7d9f1a3c5e7b9d1f3",
+  "merkle_root_onchain": "4a7d1e9c2b5f8a3d6e0c9b2f5a8d1e4c7b0a3f6d9c2e5b8a1d4f7c0e3b6a9d2f",
+  "merkle_root_from_proof": "4a7d1e9c2b5f8a3d6e0c9b2f5a8d1e4c7b0a3f6d9c2e5b8a1d4f7c0e3b6a9d2f",
+  "period_start": "2026-10-17T18:00:00Z",
+  "period_end": "2026-10-17T19:00:00Z",
+  "records_in_root": 7,
+  "network": "devnet",
+  "transaction_signature": "<devnet-transaction-signature>",
+  "explorer_url": "https://explorer.solana.com/tx/<devnet-transaction-signature>?cluster=devnet",
+  "checked_at": "2026-10-17T18:42:10Z",
+  "message": "This record matches the root stored on Solana. It has not been changed."
+}
