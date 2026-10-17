@@ -94,3 +94,41 @@ solana airdrop 2
 | `port is already allocated` | `DB_PORT=5434 docker compose up -d` |
 | `anchor: command not found` | Open a new terminal or `source ~/.cargo/env` |
 | Imports fail | `conda activate cypresswatch`, then `./scripts/check-env.sh backend` from the repo root |
+
+
+## Hazard index model
+
+**What it predicts:** the chance that a hazardous NOAA Storm Event (thunderstorm, lightning, flood, heat,
+wildfire, high wind) happens within 25 miles of a site on a given day, shown as a 0–10 percentile score
+(8 = riskier than 80% of past site-days).
+
+**Data:** 188,448 site-days (52 Florida sites × 2015–2024). Features from Open-Meteo daily weather
+(temperature, feels-like temperature, rain, rain hours, wind gusts) plus derived 3/7/30-day rain totals,
+days since rain, season, and location. Labels from NOAA Storm Events (FL, GA, AL). Hazard days: 4.2%.
+
+**Model:** LightGBM, 90 trees (chosen by early stopping on 2022).
+
+**Evaluation (time-based split: trained 2015–2022, tested once on unseen 2023–2024):**
+
+| Model | ROC AUC | PR AUC | Brier |
+| --- | --- | --- | --- |
+| **LightGBM** | **0.889** | **0.358** | **0.033** |
+| Baseline: month only | 0.664 | 0.065 | 0.040 |
+| Baseline: heat only | 0.616 | 0.060 | 0.040 |
+
+**Why LightGBM:** Random Forest tied on validation PR AUC (0.365 vs 0.365); LightGBM was slightly better on
+ROC AUC and Brier, is far smaller (90 trees), scores 60 sites in milliseconds, and gives fast per-site SHAP
+explanations. Logistic regression was clearly behind (PR AUC 0.317), showing non-linear effects such as
+risk jumping above certain rain and wind levels. Both tree models agreed on the top drivers.
+
+**What drives the score:** rain today (34% of gain), wind gusts (19%), location (12%), season (12%),
+feels-like temperature (6%). Charts: `reports/shap_lightgbm.png`, `reports/calibration_both.png`,
+`reports/score_vs_hazard_rate.png`.
+
+**Limitations:**
+- Labels are *reported* events; unreported hazards count as calm days, and denser areas report more.
+  Location features partly reflect reporting, not only weather.
+- Heat events are rarely reported in Florida, so heat is also checked by a rule-based heat index.
+- Zone-wide events are matched to sites by county name.
+- Live lightning, flood warnings and active fires are applied as rules on top of the model
+  (e.g. an active lightning stop-work sets the score to at least 9).
