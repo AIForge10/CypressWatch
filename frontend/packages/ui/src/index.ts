@@ -1,2 +1,2 @@
-// Shared React components go here (one file per component, re-exported below).
+// Shared React components are implemented in index.tsx.
 export {};

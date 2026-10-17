@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Shared components + color tokens for supervisor and crew apps (M1 + M2)",
   "exports": {
-    ".": "./src/index.ts",
+    ".": "./src/index.tsx",
     "./tokens.css": "./src/tokens.css"
   },
   "devDependencies": {
