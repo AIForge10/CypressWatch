@@ -39,6 +39,11 @@ backend/ml/models/*
 backend/data/sites/*.xlsx
 backend/ai/evals/sample_images/*
 !backend/ai/evals/sample_images/.gitkeep
+backend/ml/data/
+backend/data/sites/raw/
+backend/workers/data/
+backend/ai/cache/
+__pycache__/
 
 # --- Solana / Anchor ---
 backend/ledger/program/target/

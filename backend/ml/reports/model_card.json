@@ -1,0 +1,83 @@
+{
+  "model_version": "hazard-index-v1",
+  "algorithm": "LightGBM gradient-boosted trees (90 trees); probability mapped to a 0\u201310 percentile score",
+  "trained_at": "2026-10-17T10:00:33Z",
+  "training_data": [
+    {
+      "name": "NOAA Storm Events (FL, GA, AL), events within 25 miles of a site",
+      "rows": 188448,
+      "years": "2015-2024"
+    },
+    {
+      "name": "Open-Meteo historical daily weather per site",
+      "rows": 188448,
+      "years": "2015-2024"
+    }
+  ],
+  "label": "A hazardous NOAA Storm Event (storm, flood, heat, wildfire, high wind) within 25 miles of the site that day",
+  "features": [
+    "temperature_2m_max",
+    "apparent_temperature_max",
+    "precipitation_sum",
+    "precipitation_hours",
+    "wind_gusts_10m_max",
+    "rain_3d_in",
+    "rain_7d_in",
+    "rain_30d_in",
+    "days_since_rain",
+    "heavy_rain_day",
+    "season_sin",
+    "season_cos",
+    "lat",
+    "lon"
+  ],
+  "evaluation": [
+    {
+      "split": "Time-based: trained 2015\u20132022, tested on 2023\u20132024",
+      "metric": "PR AUC",
+      "model": 0.3581,
+      "baseline": 0.065,
+      "baseline_name": "Month only (seasonal climatology)"
+    },
+    {
+      "split": "Time-based: trained 2015\u20132022, tested on 2023\u20132024",
+      "metric": "ROC AUC",
+      "model": 0.8887,
+      "baseline": 0.6641,
+      "baseline_name": "Month only (seasonal climatology)"
+    }
+  ],
+  "calibration_note": "Calibration checked on 2023\u20132024 (reports/calibration_both.png). The app shows a percentile score, not a raw probability.",
+  "top_global_features": [
+    {
+      "feature": "precipitation_sum",
+      "importance": 0.3441
+    },
+    {
+      "feature": "wind_gusts_10m_max",
+      "importance": 0.1906
+    },
+    {
+      "feature": "lat",
+      "importance": 0.0715
+    },
+    {
+      "feature": "season_cos",
+      "importance": 0.0626
+    },
+    {
+      "feature": "apparent_temperature_max",
+      "importance": 0.0554
+    },
+    {
+      "feature": "season_sin",
+      "importance": 0.0518
+    }
+  ],
+  "limitations": [
+    "Labels come from reported storm events; unreported hazards count as calm days.",
+    "Heat events are rarely reported in Florida, so heat risk is also checked by a rule-based heat index.",
+    "Zone-wide events (e.g. heat) are matched to sites by county name.",
+    "Live lightning, flood warnings and active fires are applied by rules on top of the model score."
+  ]
+}

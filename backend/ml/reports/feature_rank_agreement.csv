@@ -1,0 +1,15 @@
+,Random forest rank,LightGBM rank
+precipitation_sum,1,1
+season_cos,6,2
+apparent_temperature_max,7,3
+lat,3,4
+rain_3d_in,5,5
+wind_gusts_10m_max,2,6
+days_since_rain,4,7
+temperature_2m_max,8,8
+lon,11,9
+season_sin,9,10
+rain_30d_in,13,11
+precipitation_hours,10,12
+rain_7d_in,12,13
+heavy_rain_day,14,14
