@@ -41,6 +41,12 @@ STOP_WORK_FLOOR = 9.0  # an active lightning stop-work always ranks a site near 
 
 # Features that only make sense together are reported as one reason.
 GROUPS = {"lat": "location", "lon": "location", "season_sin": "season", "season_cos": "season"}
+
+def _rain_when(r) -> str:
+    d = int(round(r["days_since_rain"]))
+    k = int(r.get("day_offset", 0)) - d  # day of the last rain, relative to today (1 = tomorrow)
+    return {1: "Rain tomorrow", 0: "Rain today", -1: "Rain yesterday"}.get(k, f"{d} days since rain")
+
 LABELS = {
     "precipitation_sum": lambda r: f"Rain {r['precipitation_sum']:.1f} in",
     "precipitation_hours": lambda r: f"{r['precipitation_hours']:.0f} hours of rain",
@@ -50,7 +56,7 @@ LABELS = {
     "rain_3d_in": lambda r: f"{r['rain_3d_in']:.1f} in of rain in 3 days",
     "rain_7d_in": lambda r: f"{r['rain_7d_in']:.1f} in of rain this week",
     "rain_30d_in": lambda r: f"{r['rain_30d_in']:.1f} in of rain this month",
-    "days_since_rain": lambda r: f"{r['days_since_rain']:.0f} days since rain",
+    "days_since_rain": _rain_when,
     "heavy_rain_day": lambda r: "Heavy rain (2+ in)",
     "location": lambda r: "Area with frequent past hazard reports",
     "season": lambda r: "Time of year",

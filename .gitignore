@@ -42,6 +42,7 @@ backend/ai/evals/sample_images/*
 backend/ml/data/
 backend/data/sites/raw/
 backend/workers/data/
+backend/ai/cache/
 __pycache__/
 
 # --- Solana / Anchor ---
