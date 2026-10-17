@@ -1,16 +1,16 @@
 {
   "model_version": "hazard-index-v1",
-  "algorithm": "LightGBM gradient-boosted trees (90 trees); probability mapped to a 0\u201310 percentile score",
-  "trained_at": "2026-10-17T10:00:33Z",
+  "algorithm": "LightGBM gradient-boosted trees (57 trees); probability mapped to a 0\u201310 percentile score",
+  "trained_at": "2026-10-17T19:01:08Z",
   "training_data": [
     {
       "name": "NOAA Storm Events (FL, GA, AL), events within 25 miles of a site",
-      "rows": 188448,
+      "rows": 141336,
       "years": "2015-2024"
     },
     {
       "name": "Open-Meteo historical daily weather per site",
-      "rows": 188448,
+      "rows": 141336,
       "years": "2015-2024"
     }
   ],
@@ -35,15 +35,15 @@
     {
       "split": "Time-based: trained 2015\u20132022, tested on 2023\u20132024",
       "metric": "PR AUC",
-      "model": 0.3581,
-      "baseline": 0.065,
+      "model": 0.3384,
+      "baseline": 0.069,
       "baseline_name": "Month only (seasonal climatology)"
     },
     {
       "split": "Time-based: trained 2015\u20132022, tested on 2023\u20132024",
       "metric": "ROC AUC",
-      "model": 0.8887,
-      "baseline": 0.6641,
+      "model": 0.882,
+      "baseline": 0.6704,
       "baseline_name": "Month only (seasonal climatology)"
     }
   ],
@@ -51,27 +51,27 @@
   "top_global_features": [
     {
       "feature": "precipitation_sum",
-      "importance": 0.3441
+      "importance": 0.3688
     },
     {
       "feature": "wind_gusts_10m_max",
-      "importance": 0.1906
+      "importance": 0.2
     },
     {
       "feature": "lat",
-      "importance": 0.0715
+      "importance": 0.0741
     },
     {
       "feature": "season_cos",
-      "importance": 0.0626
+      "importance": 0.0535
     },
     {
       "feature": "apparent_temperature_max",
-      "importance": 0.0554
+      "importance": 0.0523
     },
     {
-      "feature": "season_sin",
-      "importance": 0.0518
+      "feature": "rain_3d_in",
+      "importance": 0.0452
     }
   ],
   "limitations": [

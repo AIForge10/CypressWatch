@@ -1,0 +1,49 @@
+Sites: C:\Users\yash2\Desktop\Projects\CypressReach\CypressWatch\contracts\mocks\sites.json
+52 sites, 2015-01-01 to 2024-12-31
+[1/52] site_012: already downloaded
+[2/52] site_032: already downloaded
+[3/52] site_031: already downloaded
+[4/52] site_048: already downloaded
+[5/52] site_035: already downloaded
+[6/52] site_041: already downloaded
+[7/52] site_007: already downloaded
+[8/52] site_020: already downloaded
+[9/52] site_039: already downloaded
+[10/52] site_051: already downloaded
+[11/52] site_005: already downloaded
+[12/52] site_017: already downloaded
+[13/52] site_021: already downloaded
+[14/52] site_008: already downloaded
+[15/52] site_046: already downloaded
+[16/52] site_018: already downloaded
+[17/52] site_034: already downloaded
+[18/52] site_013: already downloaded
+[19/52] site_016: already downloaded
+[20/52] site_049: already downloaded
+[21/52] site_009: already downloaded
+[22/52] site_042: already downloaded
+[23/52] site_044: already downloaded
+[24/52] site_002: already downloaded
+[25/52] site_026: already downloaded
+[26/52] site_033: already downloaded
+[27/52] site_036: already downloaded
+[28/52] site_006: already downloaded
+[29/52] site_003: already downloaded
+[30/52] site_014: already downloaded
+[31/52] site_023: already downloaded
+[32/52] site_019: already downloaded
+[33/52] site_001: already downloaded
+[34/52] site_047: already downloaded
+[35/52] site_004: already downloaded
+[36/52] site_037: already downloaded
+[37/52] site_043: already downloaded
+[38/52] site_025: already downloaded
+[39/52] site_029: already downloaded
+  site_052: HTTP 429 Hourly API request limit exceeded. Please try again in the next hour., retrying in 30s
+  site_052: HTTP 429 Hourly API request limit exceeded. Please try again in the next hour., retrying in 60s
+  site_052: HTTP 429 Hourly API request limit exceeded. Please try again in the next hour., retrying in 90s
+  site_052: HTTP 429 Hourly API request limit exceeded. Please try again   site_052: HTTP 429 Hourly API reque  site_052: HTTP 429 Hourly API request limit exceeded. Please try again 
+Stopped: Open-Meteo's free usage li
+Stopped: Open-Meteo's free usage limit is reached (Hourly API request limit exceeded. Please try again in the next hour.).
+39 of 52 sites are saved and will be skipped next time.
+Run the same command again later to download the rest.
