@@ -24,6 +24,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from app.routers.common import BACKEND, api_error, now_iso
 from cypress_db import db
+from cypress_workers.common import append_events, make_event
 
 router = APIRouter(prefix="/api", tags=["reports"])
 
@@ -55,6 +56,14 @@ def _by_client_id(client_id: str) -> dict | None:
     with db.conn() as c:
         row = c.execute("SELECT * FROM reports WHERE client_id = %s", (client_id,)).fetchone()
     return db._clean(row) if row else None
+
+
+def _emit(type_: str, site_id: str, data: dict) -> None:
+    """Contract live event -> events.json; /api/ws pushes it, the scheduler anchors report_created."""
+    try:
+        append_events([make_event(type_, site_id, data)])
+    except Exception as e:  # noqa: BLE001 - the report is saved; live feed is best effort
+        print("live event skipped:", e)
 
 
 def _photo_path(report_id: str):
@@ -123,6 +132,8 @@ def create_report(photo: UploadFile = File(...), data: str = Form(...)):
         return JSONResponse(status_code=409, content={
             "error": "duplicate", "message": "This report was already uploaded.",
             "request_id": f"req_{uuid.uuid4().hex[:10]}", "report": json.loads(json.dumps(report, default=str))})
+    _emit("report_created", site_id, {"report_id": report_id, "hazard": (triage or {}).get("hazard"),
+                                      "severity": (triage or {}).get("severity"), "status": "pending_review"})
     return report
 
 
@@ -190,5 +201,9 @@ def confirm_report(report_id: str, body: dict, background: BackgroundTasks):
     except Exception as e:  # noqa: BLE001 - the decision still saves; ledger is the audit layer
         print("ledger record skipped:", str(e).splitlines()[0])
 
-    return db.update_report(report_id, status=status, confirmed_hazard=hazard, confirmed_severity=severity,
-                            ledger_record_id=record_id)
+    updated = db.update_report(report_id, status=status, confirmed_hazard=hazard, confirmed_severity=severity,
+                               ledger_record_id=record_id)
+    if status == "confirmed":
+        _emit("report_confirmed", report["site_id"], {"report_id": report_id, "confirmed_hazard": hazard,
+                                                      "confirmed_severity": severity})
+    return updated
