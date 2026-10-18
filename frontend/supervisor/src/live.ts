@@ -1,5 +1,5 @@
 // Live backend service for the supervisor app. Talks to the CypressWatch API (M4):
-// /api/sites/summary, /api/alerts, /api/demo/strike, /api/ledger/*, /api/ws.
+// /api/sites/summary, /api/alerts, /api/demo/strike, /api/reports, /api/ledger/*, /api/ws.
 // Falls back to the bundled demo data whenever the backend is unreachable, so the
 // screens always render something; every consumer marks the feed "Live" vs "Demo".
 
@@ -27,6 +27,17 @@ export type LedgerRecord = {
   record_id: string; record_type: string; site_id: string; created_at: string; anchored: boolean;
   merkle_root: string | null; transaction_signature: string | null;
 };
+export type HazardKey = 'lightning' | 'heat' | 'storm' | 'flood' | 'soil_saturation' | 'wildfire' | 'wildlife';
+export type Severity = 'low' | 'medium' | 'high';
+export type ReportStatus = 'pending_review' | 'confirmed' | 'dismissed';
+export type CrewReport = {
+  report_id: string; site_id: string; lat: number | null; lon: number | null; note: string; photo_url: string;
+  captured_at: string; uploaded_at: string; reported_by: { user_id: string; name: string };
+  triage: { hazard: HazardKey; severity: Severity; description: string; confidence: number; model: string } | null;
+  status: ReportStatus; confirmed_hazard: HazardKey | null; confirmed_severity: Severity | null; ledger_record_id: string | null;
+};
+export type ReportConfirmRequest = { status: 'confirmed' | 'dismissed'; confirmed_hazard: HazardKey | null; confirmed_severity: Severity | null };
+
 async function call<T>(path: string, getAccessToken: AccessTokenGetter, init: RequestInit = {}): Promise<T> {
   const accessToken = await getAccessToken();
   if (!accessToken) throw new Error('API access token unavailable. Sign in again and retry.');
@@ -125,6 +136,20 @@ export const live = {
       method: 'POST',
       body: JSON.stringify({ site_id: siteId, distance_miles: distanceMiles }),
     }),
+
+  reports: (getAccessToken: AccessTokenGetter, status: ReportStatus | 'all' = 'pending_review') =>
+    call<{ server_time: string; reports: CrewReport[] }>(`/api/reports?status=${status}`, getAccessToken),
+
+  confirmReport: (reportId: string, getAccessToken: AccessTokenGetter, body: ReportConfirmRequest) =>
+    call<CrewReport>(`/api/reports/${reportId}`, getAccessToken, { method: 'PATCH', body: JSON.stringify(body) }),
+
+  // <img> cannot send a Bearer token, so the photo is fetched with one and shown from a blob URL.
+  photoObjectUrl: async (report: CrewReport, getAccessToken: AccessTokenGetter) => {
+    const accessToken = await getAccessToken();
+    const res = await fetch(`${API_URL}${report.photo_url}`, { headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {} });
+    if (!res.ok) throw new Error(`API ${res.status} on ${report.photo_url}`);
+    return URL.createObjectURL(await res.blob());
+  },
 
   // Simulated heavy-rain night: the flood rule raises flood_risk alerts on river sites
   // (river flag / FEMA zone / near a USGS gauge) on its next flood tick. Simulated: true.

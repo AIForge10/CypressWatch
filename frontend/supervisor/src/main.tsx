@@ -5,7 +5,7 @@ import Map, { Marker, NavigationControl, Popup } from 'react-map-gl/maplibre';
 import type { StyleSpecification } from 'maplibre-gl';
 import { Badge, Button, Card, PageHeader } from '@cypresswatch/ui';
 import { AccessDenied, AuthProvider, RequireAuth, RequireRole, useAuth } from './auth';
-import { isRiskLevel, live, summaryToSite } from './live';
+import { isRiskLevel, live, summaryToSite, type CrewReport, type HazardKey, type ReportStatus, type Severity } from './live';
 import { riskTone, siteDetailData, sites as demoSites, type RiskLevel, type Site } from './data';
 import './app.css';
 import '@cypresswatch/ui/tokens.css';
@@ -46,7 +46,7 @@ function AppShell() {
       <div className="cw-role">Current workspace<strong>{roleLabel}</strong></div>
       <div className="cw-nav-label">Operations</div>
       <nav className="cw-nav" aria-label="Primary navigation">
-        {user?.role === 'supervisor' && <><NavLink to="/app/supervisor" end>Overview</NavLink><NavLink to="/app/supervisor/briefings">Briefings</NavLink><NavLink to="/app/supervisor/verify">Safety Ledger / Verify</NavLink></>}
+        {user?.role === 'supervisor' && <><NavLink to="/app/supervisor" end>Overview</NavLink><NavLink to="/app/supervisor/reports">Crew reports</NavLink><NavLink to="/app/supervisor/briefings">Briefings</NavLink><NavLink to="/app/supervisor/verify">Safety Ledger / Verify</NavLink></>}
         {user?.role === 'crew' && <NavLink to="/app/crew">Crew app</NavLink>}
         {user?.role === 'owner' && <><NavLink to="/app/owner" end>Sites</NavLink><NavLink to="/app/owner/sites/demo/history">Safety History</NavLink><NavLink to="/app/owner/verify">Verify Records</NavLink></>}
       </nav>
@@ -411,6 +411,107 @@ function VerifyPage() {
     </Card>
   </div>;
 }
+const HAZARD_LABELS: Record<HazardKey, string> = { lightning: 'Lightning', heat: 'Heat', storm: 'Storm', flood: 'Flood', soil_saturation: 'Soil saturation', wildfire: 'Wildfire', wildlife: 'Wildlife' };
+const severityTone = (severity: Severity | null | undefined) => severity === 'high' ? 'danger' : severity === 'medium' ? 'warning' : 'info';
+const statusLabels: Record<ReportStatus, string> = { pending_review: 'Needs review', confirmed: 'Confirmed', dismissed: 'Dismissed' };
+
+function ReportCard({ report, siteName, onDecided }: { report: CrewReport; siteName: string; onDecided: (report: CrewReport) => void }) {
+  const { getAccessToken } = useAuth();
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let url: string | null = null;
+    void live.photoObjectUrl(report, getAccessToken).then((objectUrl) => { url = objectUrl; setPhotoUrl(objectUrl); }).catch(() => setPhotoUrl(null));
+    return () => { if (url) URL.revokeObjectURL(url); };
+  }, [getAccessToken, report]);
+  const [hazard, setHazard] = useState<HazardKey | ''>(report.confirmed_hazard ?? report.triage?.hazard ?? '');
+  const [severity, setSeverity] = useState<Severity>(report.confirmed_severity ?? report.triage?.severity ?? 'medium');
+  const [busy, setBusy] = useState<'confirmed' | 'dismissed' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const pending = report.status === 'pending_review';
+  const decide = (status: 'confirmed' | 'dismissed') => {
+    setBusy(status);
+    setError(null);
+    void live.confirmReport(report.report_id, getAccessToken, status === 'confirmed'
+      ? { status, confirmed_hazard: hazard || null, confirmed_severity: severity }
+      : { status, confirmed_hazard: null, confirmed_severity: null })
+      .then(onDecided)
+      .catch((err: Error) => setError(`Could not save the decision (${err.message}).`))
+      .finally(() => setBusy(null));
+  };
+  return <Card className="cw-report">
+    <a className="cw-report-photo" href={photoUrl ?? undefined} target="_blank" rel="noreferrer">{photoUrl ? <img src={photoUrl} alt={`Crew photo from ${siteName}${report.note ? `: ${report.note}` : ''}`} /> : <span className="cw-report-photo-empty">Loading photo…</span>}</a>
+    <div className="cw-report-body">
+      <div className="cw-section-heading" style={{ marginBottom: 6 }}><h2>{siteName}</h2><Badge tone={pending ? 'warning' : report.status === 'confirmed' ? 'success' : 'neutral'}>{statusLabels[report.status]}</Badge></div>
+      <p className="cw-factor-meta">{report.reported_by?.name ?? 'Crew'} · captured {report.captured_at.replace('T', ' ').slice(0, 16)} UTC · {report.report_id}</p>
+      {report.note && <p className="cw-report-note">“{report.note}”</p>}
+      <div className="cw-report-triage">
+        <p className="cw-eyebrow" style={{ margin: 0 }}>AI triage · {report.triage?.model ?? 'unavailable'}</p>
+        {report.triage ? <>
+          <p style={{ margin: '6px 0' }}><strong>{HAZARD_LABELS[report.triage.hazard]}</strong> <Badge tone={severityTone(report.triage.severity)}>{report.triage.severity}</Badge> <span className="cw-muted">{Math.round(report.triage.confidence * 100)}% confidence</span></p>
+          <p className="cw-factor-meta" style={{ fontSize: 13 }}>{report.triage.description}</p>
+        </> : <p className="cw-factor-meta" style={{ fontSize: 13 }}>No hazard detected by AI. Review the photo and choose a hazard before confirming.</p>}
+      </div>
+      {pending ? <>
+        <div className="cw-report-controls">
+          <select className="cw-select" aria-label="Confirmed hazard" value={hazard} onChange={(event) => setHazard(event.target.value as HazardKey)}>
+            <option value="" disabled>Choose hazard</option>
+            {(Object.keys(HAZARD_LABELS) as HazardKey[]).map((key) => <option key={key} value={key}>{HAZARD_LABELS[key]}</option>)}
+          </select>
+          <select className="cw-select" aria-label="Confirmed severity" value={severity} onChange={(event) => setSeverity(event.target.value as Severity)}>
+            <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option>
+          </select>
+          <Button onClick={() => decide('confirmed')} disabled={busy !== null || !hazard}>{busy === 'confirmed' ? 'Confirming…' : 'Confirm'}</Button>
+          <Button variant="quiet" onClick={() => decide('dismissed')} disabled={busy !== null}>{busy === 'dismissed' ? 'Dismissing…' : 'Dismiss'}</Button>
+        </div>
+        <p className="cw-factor-meta">Your decision, the AI result and the photo fingerprint are written to the Safety Ledger on Solana.</p>
+      </> : <p className="cw-factor-meta" style={{ marginTop: 10 }}>
+        {report.status === 'confirmed' && <>Confirmed as <strong>{report.confirmed_hazard ? HAZARD_LABELS[report.confirmed_hazard] : 'unspecified'}</strong> · {report.confirmed_severity} severity. </>}
+        {report.ledger_record_id ? <>Ledger record <Link to="/app/supervisor/verify">{report.ledger_record_id}</Link></> : 'No ledger record.'}
+      </p>}
+      {error && <p className="cw-factor-meta" role="alert" style={{ color: '#8b332c' }}>{error}</p>}
+    </div>
+  </Card>;
+}
+
+function ReportsPage() {
+  const [status, setStatus] = useState<ReportStatus | 'all'>('pending_review');
+  const [reports, setReports] = useState<CrewReport[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { getAccessToken, isMockAuth } = useAuth();
+  const { sitesLive } = useLiveSites();
+  const siteNames = Object.fromEntries((sitesLive ?? demoSites).map((site) => [site.id, site.name]));
+  useEffect(() => {
+    if (isMockAuth) {
+      setReports(null);
+      setError('Demo sign-in has no API access token. Sign in with Auth0 to review live crew reports.');
+      return;
+    }
+    let stopped = false;
+    const refresh = () => live.reports(getAccessToken, status)
+      .then((data) => { if (!stopped) { setReports(data.reports); setError(null); } })
+      .catch((err: Error) => { if (!stopped) setError(err.message); });
+    setReports(null);
+    void refresh();
+    const polling = window.setInterval(() => { void refresh(); }, 15_000);
+    const socket = live.openEvents(getAccessToken, (event) => { if (event.type.startsWith('report_')) void refresh(); });
+    return () => { stopped = true; window.clearInterval(polling); socket.close(); };
+  }, [getAccessToken, isMockAuth, status]);
+  const decided = (updated: CrewReport) => setReports((prev) => (prev ?? [])
+    .map((report) => report.report_id === updated.report_id ? updated : report)
+    .filter((report) => status === 'all' || report.status === status || report.report_id === updated.report_id));
+  const tabs: { key: ReportStatus | 'all'; label: string }[] = [{ key: 'pending_review', label: 'Needs review' }, { key: 'confirmed', label: 'Confirmed' }, { key: 'dismissed', label: 'Dismissed' }, { key: 'all', label: 'All' }];
+  return <div>
+    <PageHeader eyebrow="Crew reports" title="Review hazard reports" description="Crew photos are triaged by Gemini in seconds. A supervisor confirms or dismisses each one, and the decision is recorded on the Safety Ledger." />
+    <div className="cw-filter-bar" role="tablist" aria-label="Report status">
+      {tabs.map((tab) => <Button key={tab.key} role="tab" aria-selected={status === tab.key} variant={status === tab.key ? 'primary' : 'secondary'} onClick={() => setStatus(tab.key)}>{tab.label}</Button>)}
+    </div>
+    {error && <Card><p style={{ margin: 0, color: '#8b332c' }}>Live reports unavailable: {error}</p></Card>}
+    {!reports && !error && <p className="cw-muted">Loading reports…</p>}
+    {reports?.length === 0 && <Card><div style={{ padding: 8 }}><p style={{ margin: 0 }}>{status === 'pending_review' ? 'No reports waiting for review.' : 'No reports in this list.'}</p><p className="cw-muted" style={{ marginBottom: 0 }}>New crew reports appear here automatically.</p></div></Card>}
+    <div className="cw-report-list">{reports?.map((report) => <ReportCard key={`${report.report_id}-${report.status}`} report={report} siteName={siteNames[report.site_id] ?? report.site_id} onDecided={decided} />)}</div>
+  </div>;
+}
+
 function Login() { const { login, isMockAuth, isAuthenticated } = useAuth(); const navigate = useNavigate(); useEffect(() => { if (isAuthenticated) navigate('/app', { replace: true }); }, [isAuthenticated, navigate]); return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24, background: 'var(--cw-subtle)' }}><Card><div style={{ width: 'min(440px, 80vw)', padding: 32 }}><p className="cw-eyebrow">CypressWatch</p><h1 style={{ margin: '0 0 10px' }}>Sign in to safety operations</h1><p style={{ color: 'var(--cw-muted)', lineHeight: 1.5 }}>{isMockAuth ? 'Auth0 is not configured, so local demo authentication is active.' : 'Sign in with your CypressWatch Auth0 account.'}</p><Button onClick={() => { login(); if (isMockAuth) navigate('/app'); }}>{isMockAuth ? 'Continue as supervisor demo' : 'Continue with Auth0'}</Button><p style={{ margin: '18px 0 0', color: 'var(--cw-muted)', fontSize: 12 }}>{isMockAuth ? 'Demo mode · supervisor@example.com' : 'Production authentication · Auth0'}</p><p style={{ margin: '18px 0 0', fontSize: 13 }}>Crew member? <a href={crewAppUrl}>Open the separate crew app</a>.</p></div></Card></div>; }
 function AuthCallback() {
   const { search } = useLocation();
@@ -424,7 +525,7 @@ createRoot(document.getElementById('root')!).render(<StrictMode><BrowserRouter><
   <Route path="/" element={<AuthCallback />} />
   <Route path="/login" element={<Login />} />
   <Route element={<RequireAuth />}><Route path="/app" element={<AppShell />}><Route index element={<RoleHomeRedirect />} />
-    <Route element={<RequireRole role="supervisor" />}><Route path="supervisor" element={<SupervisorHome />} /><Route path="supervisor/sites" element={<SupervisorHome />} /><Route path="supervisor/sites/:siteId" element={<SiteDetail />} /><Route path="supervisor/briefings" element={<Placeholder title="Briefings" description="Prepare and review the latest safety briefings." />} /><Route path="supervisor/verify" element={<VerifyPage />} /></Route>
+    <Route element={<RequireRole role="supervisor" />}><Route path="supervisor" element={<SupervisorHome />} /><Route path="supervisor/sites" element={<SupervisorHome />} /><Route path="supervisor/sites/:siteId" element={<SiteDetail />} /><Route path="supervisor/reports" element={<ReportsPage />} /><Route path="supervisor/briefings" element={<Placeholder title="Briefings" description="Prepare and review the latest safety briefings." />} /><Route path="supervisor/verify" element={<VerifyPage />} /></Route>
     <Route element={<RequireRole role="crew" />}><Route path="crew" element={<CrewAppHandoff />} /><Route path="crew/site" element={<Navigate to="/app/crew" replace />} /><Route path="crew/report" element={<Navigate to="/app/crew" replace />} /></Route>
     <Route element={<RequireRole role="owner" />}><Route path="owner" element={<Placeholder title="Sites" description="Read-only site visibility for project owners." />} /><Route path="owner/sites/:siteId/history" element={<Placeholder title="Safety history" description="Read-only history for a selected site." />} /><Route path="owner/verify" element={<Placeholder title="Verify records" description="Read-only verification records." />} /></Route>
   </Route></Route>

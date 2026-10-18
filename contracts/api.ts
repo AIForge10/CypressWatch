@@ -54,6 +54,10 @@ export const api = {
     form.append("data", JSON.stringify(data));
     return call<T.Report>("/api/reports", { method: "POST", body: form });
   },
+  reportQueue: (status: T.Report["status"] | "all" = "pending_review") =>
+    USE_MOCKS ? mock<T.ReportsResponse>(reportsMock) : call<T.ReportsResponse>(`/api/reports?status=${status}`),
+  confirmReport: (reportId: string, body: T.ReportConfirmRequest) =>
+    USE_MOCKS ? mock<T.Report>({ ...reportCreatedMock, ...body }) : call<T.Report>(`/api/reports/${reportId}`, { method: "PATCH", body: JSON.stringify(body) }),
   verify: (recordId: string) => USE_MOCKS ? mock<T.LedgerVerify>(ledgerMock) : call<T.LedgerVerify>(`/api/ledger/verify/${recordId}`),
   model: () => USE_MOCKS ? mock<T.ModelCard>(modelMock) : call<T.ModelCard>("/api/model"),
 };
