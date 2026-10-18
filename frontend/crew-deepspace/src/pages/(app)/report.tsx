@@ -8,6 +8,7 @@ import { cn } from '../../lib/utils'
 import type { HazardKey } from '../../contracts/types'
 import { canUseWebGL } from '../../lib/geo'
 import type { Pin } from '../../components/LocationPicker'
+import { useT } from '../../lib/i18n'
 
 const LocationPicker = lazy(() => import('../../components/LocationPicker'))
 
@@ -16,6 +17,7 @@ type Spot = { lat: number; lon: number }
 
 /** Offline stand-in for the street map: a plain square around the site. Tap to place the pin. About 1,500 ft each way. */
 function PinPad({ site, pin, onPick }: { site: Spot; pin: Pin | null; onPick: (p: Pin) => void }) {
+  const { t } = useT()
   const HALF = 0.0042 // degrees of latitude from the center to the edge, about 1,500 ft
   const k = Math.cos((site.lat * Math.PI) / 180)
   const toXY = (p: Spot) => ({ x: 150 + (((p.lon - site.lon) * k) / HALF) * 150, y: 150 - ((p.lat - site.lat) / HALF) * 150 })
@@ -24,7 +26,7 @@ function PinPad({ site, pin, onPick }: { site: Spot; pin: Pin | null; onPick: (p
     <svg
       viewBox="0 0 300 300"
       role="img"
-      aria-label="Simple drawing of your site. Tap where the hazard is."
+      aria-label={t('rep.padLabel')}
       className="w-full touch-manipulation rounded-lg bg-secondary"
       onClick={(e) => {
         const box = e.currentTarget.getBoundingClientRect()
@@ -36,7 +38,7 @@ function PinPad({ site, pin, onPick }: { site: Spot; pin: Pin | null; onPick: (p
       <line x1="150" y1="0" x2="150" y2="300" stroke="#9fb7bb" />
       <line x1="0" y1="150" x2="300" y2="150" stroke="#9fb7bb" />
       <rect x="141" y="141" width="18" height="18" fill="#353531" stroke="#353531" strokeWidth="2" />
-      <text x="150" y="178" textAnchor="middle" fontSize="13" fontWeight="700" fill="#353531">Site center</text>
+      <text x="150" y="178" textAnchor="middle" fontSize="13" fontWeight="700" fill="#353531">{t('map.center')}</text>
       {at && <circle cx={at.x} cy={at.y} r="12" fill="#9f1a10" stroke="#fff" strokeWidth="3" />}
     </svg>
   )
@@ -69,6 +71,7 @@ function getPosition(): Promise<{ lat: number; lon: number } | null> {
 }
 
 export default function ReportPage() {
+  const { t } = useT()
   const { detail, me, queue, submitReport } = useCrew()
   const { online } = useFreshness()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -96,21 +99,21 @@ export default function ReportPage() {
 
   if (!detail || !me) {
     return (
-      <Screen title="Report a hazard" eyebrow="Tell your supervisor">
-        <Message>Your site is not loaded yet. Open the Site tab first.</Message>
+      <Screen title={t('rep.title')} eyebrow={t('rep.eyebrow')}>
+        <Message>{t('rep.notLoaded')}</Message>
       </Screen>
     )
   }
 
   async function send() {
     if (!detail) return
-    if (!photo) return setProblem('Take a photo first.')
+    if (!photo) return setProblem(t('rep.needPhoto'))
     setProblem(null)
     setBusy(true)
     const wasOnline = navigator.onLine
     if (where === 'map' && !pin) {
       setBusy(false)
-      return setProblem('Tap the map to place the pin, or choose another way to set the location.')
+      return setProblem(t('rep.needPin'))
     }
     const [blob, pos] = await Promise.all([shrink(photo), where === 'photo' && photoSpot ? Promise.resolve(photoSpot) : where === 'map' ? Promise.resolve(pin) : getPosition()])
     const spot = pos ?? { lat: detail.site.lat, lon: detail.site.lon }
@@ -136,18 +139,20 @@ export default function ReportPage() {
   }
 
   return (
-    <Screen columns title="Report a hazard" eyebrow="Tell your supervisor">
+    <Screen columns title={t('rep.title')} eyebrow={t('rep.eyebrow')}>
       {done && (
         <p role="status" data-testid="report-done" className="xl:col-span-2 flex items-start gap-2 rounded-xl border border-success bg-success-soft p-4 text-lg font-bold">
           {done === 'sent' ? <CircleCheck className="mt-0.5 h-6 w-6 shrink-0" aria-hidden /> : <Clock className="mt-0.5 h-6 w-6 shrink-0" aria-hidden />}
-          {done === 'sent' ? 'Report sent to your team.' : 'Saved on this phone. It uploads on its own when signal returns.'}
+          {done === 'sent' ? t('rep.sent') : t('rep.saved')}
         </p>
       )}
 
-      <div className="grid items-start gap-4 xl:col-span-2 xl:grid-cols-2">
-      <Card className="xl:col-start-1 xl:row-start-1">
-        <h2 className="mb-2 text-lg font-bold">1. Photo</h2>
-        <input ref={fileRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take or choose a photo" data-testid="photo-input" onChange={(e) => {
+      <div className="flex flex-col gap-4 xl:col-span-2 xl:grid xl:grid-cols-2 xl:items-start">
+      {/* Two independent columns on wide screens, so a short card never leaves a gap under it. On a phone the wrappers vanish and `order` keeps steps 1 to 4 in sequence. */}
+      <div className="contents xl:flex xl:flex-col xl:gap-4">
+      <Card className="order-1">
+        <h2 className="mb-2 text-lg font-bold">{t('rep.s1')}</h2>
+        <input ref={fileRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label={t('rep.photoInput')} data-testid="photo-input" onChange={(e) => {
             const f = e.target.files?.[0] ?? null
             setPhoto(f)
             setDone(null)
@@ -160,42 +165,20 @@ export default function ReportPage() {
               })
             }
           }} />
-        {preview && <img src={preview} alt="Photo of the hazard you will report" className="mb-3 max-h-64 w-full rounded-lg object-cover" />}
+        {preview && <img src={preview} alt={t('rep.photoAlt')} className="mb-3 max-h-64 w-full rounded-lg object-cover" />}
         <BigButton onClick={() => fileRef.current?.click()}>
-          <Camera className="h-6 w-6" aria-hidden /> {photo ? 'Retake photo' : 'Take photo'}
+          <Camera className="h-6 w-6" aria-hidden /> {photo ? t('rep.retake') : t('rep.take')}
         </BigButton>
       </Card>
 
-      <Card className="xl:col-start-2 xl:row-start-1">
-        <h2 className="mb-2 text-lg font-bold">2. What is it? (optional)</h2>
-        <div className="grid grid-cols-2 gap-2">
-          {HAZARD_KEYS.map((k) => {
-            const { label, Icon } = HAZARDS[k]
-            const on = hazard === k
-            return (
-              <button
-                key={k}
-                type="button"
-                aria-pressed={on}
-                onClick={() => setHazard(on ? null : k)}
-                className={cn('flex min-h-14 items-center gap-2 rounded-lg border-2 px-3 text-base font-bold', on ? 'border-primary bg-primary text-primary-foreground' : 'border-input bg-card')}
-              >
-                {on ? <Check className="h-5 w-5" aria-hidden /> : <Icon className="h-5 w-5" aria-hidden />}
-                {label}
-              </button>
-            )
-          })}
-        </div>
-      </Card>
-
-      <Card className="xl:col-start-1 xl:row-start-2">
-        <h2 className="mb-2 text-lg font-bold">3. Where is the hazard?</h2>
-        <div role="radiogroup" aria-label="Where is the hazard?" className="flex flex-col gap-2">
+      <Card className="order-3">
+        <h2 className="mb-2 text-lg font-bold">{t('rep.s3')}</h2>
+        <div role="radiogroup" aria-label={t('rep.whereAria')} className="flex flex-col gap-2">
           {(
             [
-              ['photo', 'Where I took the photo', photo ? (locating ? 'Saving your location...' : photoSpot ? 'Saved when you took the photo. Walking away will not move it.' : 'Your phone did not give a location. Use another choice, or the pin goes to the site center.') : 'Saved the moment you take the photo.'],
-              ['now', 'Where I am now', 'Uses your location when you press send.'],
-              ['map', 'Choose on the map', 'Tap the spot yourself. Best if you have already moved away.'],
+              ['photo', t('rep.where.photo'), photo ? (locating ? t('rep.help.photoLocating') : photoSpot ? t('rep.help.photoSaved') : t('rep.help.photoMissing')) : t('rep.help.photoNone')],
+              ['now', t('rep.where.now'), t('rep.help.now')],
+              ['map', t('rep.where.map'), t('rep.help.map')],
             ] as [Where, string, string][]
           ).map(([k, label, help]) => (
             <button
@@ -217,7 +200,7 @@ export default function ReportPage() {
         {where === 'map' && (
           <div className="mt-3">
             {online && webgl && !mapBroken ? (
-              <Suspense fallback={<div className="flex h-72 items-center justify-center text-base">Loading map...</div>}>
+              <Suspense fallback={<div className="flex h-72 items-center justify-center text-base">{t('map.loading')}</div>}>
                 <LocationPicker siteLat={detail.site.lat} siteLon={detail.site.lon} pin={pin} onPick={(p) => {
                   setPin(p)
                   setProblem(null)
@@ -225,7 +208,7 @@ export default function ReportPage() {
               </Suspense>
             ) : (
               <>
-                <p className="mb-2 text-sm font-bold">{online ? 'The street map could not load.' : 'No signal.'} Tap this drawing of your site instead. Edge to edge is about 3,000 ft.</p>
+                <p className="mb-2 text-sm font-bold">{online ? t('rep.fallbackA') : t('rep.fallbackB')} {t('rep.fallbackC')}</p>
                 <PinPad site={{ lat: detail.site.lat, lon: detail.site.lon }} pin={pin} onPick={(p) => {
                   setPin(p)
                   setProblem(null)
@@ -233,43 +216,69 @@ export default function ReportPage() {
               </>
             )}
             <p className="mt-2 flex items-center justify-between gap-2 text-sm">
-              <span data-testid="pin-status">{pin ? `Pin placed (${pin.lat}, ${pin.lon}). Drag it or tap again to move it.` : 'Tap the map where the hazard is.'}</span>
+              <span data-testid="pin-status">{pin ? t('rep.pinPlaced', { lat: pin.lat, lon: pin.lon }) : t('rep.pinTap')}</span>
               {pin && (
-                <button type="button" onClick={() => setPin(null)} className="min-h-11 rounded-lg border-2 border-input px-3 font-bold">Clear pin</button>
+                <button type="button" onClick={() => setPin(null)} className="min-h-11 rounded-lg border-2 border-input px-3 font-bold">{t('rep.clearPin')}</button>
               )}
             </p>
           </div>
         )}
       </Card>
 
-      <Card className="xl:col-start-2 xl:row-start-2">
-        <h2 className="mb-2 text-lg font-bold">4. Note (optional)</h2>
+      </div>
+      <div className="contents xl:flex xl:flex-col xl:gap-4">
+      <Card className="order-2">
+        <h2 className="mb-2 text-lg font-bold">{t('rep.s2')}</h2>
+        <div className="grid grid-cols-2 gap-2">
+          {HAZARD_KEYS.map((k) => {
+            const { Icon } = HAZARDS[k]
+            const label = t(`hz.${k}`)
+            const on = hazard === k
+            return (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setHazard(on ? null : k)}
+                className={cn('flex min-h-14 items-center gap-2 rounded-lg border-2 px-3 text-base font-bold', on ? 'border-primary bg-primary text-primary-foreground' : 'border-input bg-card')}
+              >
+                {on ? <Check className="h-5 w-5" aria-hidden /> : <Icon className="h-5 w-5" aria-hidden />}
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      </Card>
+
+      <Card className="order-4">
+        <h2 className="mb-2 text-lg font-bold">{t('rep.s4')}</h2>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={3}
           maxLength={280}
-          placeholder="Where exactly? Example: by the culvert next to pole 14"
+          placeholder={t('rep.placeholder')}
           className="w-full rounded-lg border-2 border-input bg-card p-3 text-base"
         />
       </Card>
       </div>
+      </div>
 
       {problem && <p role="alert" className="xl:col-span-2 rounded-lg border-2 border-destructive bg-card p-3 text-base font-bold text-destructive">{problem}</p>}
       <BigButton className="xl:col-span-2" data-testid="send-report" disabled={busy} onClick={() => void send()}>
-        {busy ? 'Saving...' : online ? 'Send report' : 'Save report (no signal)'}
+        {busy ? t('rep.saving') : online ? t('rep.send') : t('rep.saveOffline')}
       </BigButton>
-      {!online && <p className="text-base xl:col-span-2">No signal. The report is saved on this phone and uploads on its own when signal returns.</p>}
+      {!online && <p className="text-base xl:col-span-2">{t('rep.offlineNote')}</p>}
 
       {queue.length > 0 && (
         <Card className="xl:col-span-2">
-          <h2 className="mb-2 text-lg font-bold">Waiting to upload ({queue.length})</h2>
+          <h2 className="mb-2 text-lg font-bold">{t('rep.waitingTitle', { n: queue.length })}</h2>
           <ul className="flex flex-col gap-2 text-base">
             {queue.map((q) => (
               <li key={q.client_id} className="flex items-center gap-2">
                 <Clock className="h-5 w-5 shrink-0" aria-hidden />
-                {q.kind === 'create_report' ? `Hazard report${q.payload.note ? `: ${q.payload.note.slice(0, 40)}` : ''}` : 'Stop-work confirmation'}
-                {q.attempts > 0 && <span className="text-sm">(tried {q.attempts}x)</span>}
+                {q.kind === 'create_report' ? `${t('rep.qReport')}${q.payload.note ? `: ${q.payload.note.slice(0, 40)}` : ''}` : t('rep.qAck')}
+                {q.attempts > 0 && <span className="text-sm">{t('rep.tried', { n: q.attempts })}</span>}
               </li>
             ))}
           </ul>

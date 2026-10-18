@@ -19,11 +19,12 @@ It is clearly labeled "Demo data" on every screen.
 
 You need a terminal (Mac: open "Terminal". Windows: open "PowerShell").
 
-1. Install a supported Node.js version (22.15+, 24, or 26) from https://nodejs.org. Close and reopen the terminal.
-2. Check it worked: `node --version` (the major version should be 22, 24, or 26)
+1. Install Node.js 22 or newer from https://nodejs.org (choose "LTS"). Close and reopen the terminal.
+2. Check it worked:  `node --version`  (should say v22 or higher)
 3. Update npm (this app needs npm 11.6+):  `npm install -g npm@latest`
-4. From the CypressWatch repository root, enter this standalone app: `cd frontend/crew-deepspace`
-5. Install its dependencies from its own lockfile: `npm ci`
+4. Unzip `cypresswatch-crew.zip`, then in the terminal go into the folder:  `cd path/to/cypresswatch-crew`
+   (tip: type `cd ` then drag the folder into the terminal window)
+5. Install the app's parts (takes a minute):  `npm install`
 
 ## Put it online (gets you a link to open on your phone)
 

@@ -3,10 +3,11 @@ import { Screen, Card, HazardName, Message } from '../../components/ui-bits'
 import { SiteView } from '../../components/SiteView'
 import { useFreshness } from '../../lib/freshness'
 import type { MapPoint } from '../../components/SiteMap2D'
-import { canUseWebGL, milesBetween, MILES_VISIBLE } from '../../lib/geo'
+import { canUseWebGL } from '../../lib/geo'
 import { cn } from '../../lib/utils'
 import { useCrew } from '../../lib/crewData'
 import { ago, useNow } from '../../lib/time'
+import { useT } from '../../lib/i18n'
 
 const SIZE = 300
 const SiteMap2D = lazy(() => import('../../components/SiteMap2D'))
@@ -32,6 +33,7 @@ function PickRow({ id, canShow, selected, onPick, label, children }: { id: strin
 }
 
 export default function MapPage() {
+  const { t, lang } = useT()
   const { detail, reports, queue } = useCrew()
   const now = useNow(30_000)
   const { online } = useFreshness()
@@ -53,8 +55,8 @@ export default function MapPage() {
   }
   if (!detail) {
     return (
-      <Screen title="Hazard map" eyebrow="Reports near you">
-        <Message>The map is not loaded yet.</Message>
+      <Screen title={t('map.title')} eyebrow={t('map.eyebrowNear')}>
+        <Message>{t('map.notLoaded')}</Message>
       </Screen>
     )
   }
@@ -70,25 +72,25 @@ export default function MapPage() {
   const feet = Math.round(span * 364_000) // degrees of latitude to feet, rounded
 
   return (
-    <Screen columns title={`${detail.site.name} map`} eyebrow={`Your site · ${detail.site.county} County, ${detail.site.state}`} description="Your site and the hazard reports around it.">
+    <Screen columns title={t('map.titleSite', { name: detail.site.name })} eyebrow={t('home.eyebrow', { county: detail.site.county, state: detail.site.state })} description={t('map.desc')}>
       {online && webgl && !mapBroken ? (
         <div ref={mapCard} className="scroll-mt-4">
         <Card className="p-2">
-          <Suspense fallback={<div className="flex h-80 items-center justify-center text-base xl:h-[26rem]">Loading map...</div>}>
+          <Suspense fallback={<div className="flex h-80 items-center justify-center text-base xl:h-[26rem]">{t('map.loading')}</div>}>
             <SiteMap2D name={detail.site.name} lat={detail.site.lat} lon={detail.site.lon} score={detail.score.hazard_score} level={detail.score.risk_level} points={points} focus={focus} onUnavailable={() => setMapBroken(true)} />
           </Suspense>
-          <p className="px-2 pb-1 pt-2 text-sm">Numbered circles are reports. Dashed W circles are waiting to upload. Reports more than 2 miles away are listed below but not drawn. Tap a report below to see it here.</p>
+          <p className="px-2 pb-1 pt-2 text-sm">{t('map.legendStreet')}</p>
         </Card>
         </div>
       ) : (
       <Card className="p-2">
-        {online && mapBroken && <p className="px-2 pb-2 text-sm font-bold">The street map could not load. Showing a simple drawing instead.</p>}
-        {!online && <p className="px-2 pb-2 text-sm font-bold">No signal. Showing a simple drawing instead of the street map.</p>}
-        <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={`Map of hazard reports around ${detail.site.name}`} className="w-full rounded-lg bg-secondary">
+        {online && mapBroken && <p className="px-2 pb-2 text-sm font-bold">{t('map.broken')}</p>}
+        {!online && <p className="px-2 pb-2 text-sm font-bold">{t('map.offlineDrawing')}</p>}
+        <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={t('map.svgLabel', { name: detail.site.name })} className="w-full rounded-lg bg-secondary">
           <line x1={SIZE / 2} y1="0" x2={SIZE / 2} y2={SIZE} stroke="#9fb7bb" strokeWidth="1" />
           <line x1="0" y1={SIZE / 2} x2={SIZE} y2={SIZE / 2} stroke="#9fb7bb" strokeWidth="1" />
           <rect x={SIZE / 2 - 9} y={SIZE / 2 - 9} width="18" height="18" fill="#353531" stroke="#353531" strokeWidth="2" />
-          <text x={SIZE / 2} y={SIZE / 2 + 28} textAnchor="middle" fontSize="13" fontWeight="700" fill="#353531">Site center</text>
+          <text x={SIZE / 2} y={SIZE / 2 + 28} textAnchor="middle" fontSize="13" fontWeight="700" fill="#353531">{t('map.center')}</text>
           {reports.map((r, i) => {
             const p = xy(r.lat, r.lon)
             return (
@@ -108,33 +110,33 @@ export default function MapPage() {
             )
           })}
         </svg>
-        <p className="px-2 pb-1 pt-2 text-sm">Edge of map is about {feet.toLocaleString()} ft from site center. Numbered circles are reports. Dashed W circles are waiting to upload.</p>
+        <p className="px-2 pb-1 pt-2 text-sm">{t('map.legendDrawing', { feet: feet.toLocaleString(lang === 'es' ? 'es-US' : 'en-US') })}</p>
       </Card>
       )}
 
       <SiteView />
 
       <Card className="xl:col-span-2">
-        <h2 className="mb-2 text-lg font-bold">Reports near your site</h2>
-        {reports.length === 0 && waiting.length === 0 && <p className="text-base">No hazard reports yet. Use the Report tab to add one.</p>}
+        <h2 className="mb-2 text-lg font-bold">{t('map.near')}</h2>
+        {reports.length === 0 && waiting.length === 0 && <p className="text-base">{t('map.none')}</p>}
         <ul className="flex flex-col divide-y-2 divide-border">
           {reports.map((r, i) => {
             const hazard = r.confirmed_hazard ?? r.triage?.hazard ?? null
             const severity = r.confirmed_severity ?? r.triage?.severity ?? null
             return (
               <li key={r.report_id}>
-                <PickRow id={r.report_id} canShow={mapShown && milesBetween(lat0, lon0, r.lat, r.lon) <= MILES_VISIBLE} selected={focus?.id === r.report_id} onPick={pick} label={`Show report ${i + 1} on the map`}>
+                <PickRow id={r.report_id} canShow={mapShown} selected={focus?.id === r.report_id} onPick={pick} label={t('map.showReport', { n: i + 1 })}>
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex items-center gap-2">
                     <span className="flex h-7 w-7 items-center justify-center rounded-full bg-destructive text-sm font-bold text-white">{i + 1}</span>
-                    {hazard ? <HazardName hazard={hazard} /> : <span className="font-bold">Hazard</span>}
+                    {hazard ? <HazardName hazard={hazard} /> : <span className="font-bold">{t('map.hazard')}</span>}
                   </span>
-                  <span className="text-sm font-bold">{severity ? `${severity[0].toUpperCase()}${severity.slice(1)} severity` : 'Severity not set'}</span>
+                  <span className="text-sm font-bold">{severity ? t(`map.sev.${severity}`) : t('map.sev.none')}</span>
                 </div>
                 <p className="mt-1 text-base">{r.note}</p>
-                {r.triage && <p className="text-sm">AI suggestion: {r.triage.description}</p>}
+                {r.triage && <p className="text-sm">{t('map.ai', { text: r.triage.description })}</p>}
                 <p className="text-sm">
-                  {r.reported_by.name}, {ago(r.uploaded_at, now)}. {r.status === 'confirmed' ? 'Confirmed by supervisor.' : r.status === 'dismissed' ? 'Dismissed by supervisor.' : 'Waiting for supervisor review.'}
+                  {t('map.by', { name: r.reported_by.name, ago: ago(r.uploaded_at, now, lang) })} {r.status === 'confirmed' ? t('map.confirmed') : r.status === 'dismissed' ? t('map.dismissed') : t('map.review')}
                 </p>
               </PickRow>
               </li>
@@ -142,13 +144,13 @@ export default function MapPage() {
           })}
           {waiting.map((w, i) => (
             <li key={w.client_id}>
-                <PickRow id={w.client_id} canShow={mapShown && milesBetween(lat0, lon0, w.lat, w.lon) <= MILES_VISIBLE} selected={focus?.id === w.client_id} onPick={pick} label={`Show waiting report W${i + 1} on the map`}>
+                <PickRow id={w.client_id} canShow={mapShown} selected={focus?.id === w.client_id} onPick={pick} label={t('map.showWaiting', { n: `W${i + 1}` })}>
               <div className="flex items-center gap-2">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-dashed border-destructive text-xs font-bold text-destructive">{`W${i + 1}`}</span>
-                {w.reporter_hazard ? <HazardName hazard={w.reporter_hazard} /> : <span className="font-bold">Hazard</span>}
+                {w.reporter_hazard ? <HazardName hazard={w.reporter_hazard} /> : <span className="font-bold">{t('map.hazard')}</span>}
               </div>
               <p className="mt-1 text-base">{w.note}</p>
-              <p className="text-sm font-bold">Waiting to upload. It sends on its own when signal returns.</p>
+              <p className="text-sm font-bold">{t('map.waitingUpload')}</p>
             </PickRow>
               </li>
           ))}

@@ -4,30 +4,34 @@ import { Screen, Card, LevelBadge, HazardName, BigButton, Message } from '../../
 import { USE_MOCKS, useCrew } from '../../lib/crewData'
 import { useFreshness } from '../../lib/freshness'
 import { ago, clock, mmss, tzAbbrev, useNow } from '../../lib/time'
+import { useT } from '../../lib/i18n'
+import { ERR_NO_SAVED, ERR_UNREACHABLE, ERR_NO_SITE } from '../../lib/crewData'
 
 export default function SitePage() {
+  const { t } = useT()
   const crew = useCrew()
   const { detail, status, error } = crew
+  const errorText = error === ERR_NO_SAVED ? t('err.noSignalEmpty') : error === ERR_UNREACHABLE ? t('err.unreachable') : error === ERR_NO_SITE ? t('err.noSite') : error
 
   if (!detail) {
     return (
-      <Screen title="Your site">
-        <Message>{status === 'loading' ? 'Loading your site...' : error ?? 'Could not load your site.'}</Message>
-        {status === 'error' && <BigButton onClick={() => void crew.refresh()}>Try again</BigButton>}
+      <Screen title={t('home.loadingTitle')}>
+        <Message>{status === 'loading' ? t('home.loading') : errorText ?? t('home.failed')}</Message>
+        {status === 'error' && <BigButton onClick={() => void crew.refresh()}>{t('home.retry')}</BigButton>}
       </Screen>
     )
   }
 
   const { site, score, hazards, conditions } = detail
   return (
-    <Screen columns title={site.name} eyebrow={`Your site · ${site.county} County, ${site.state}`}>
+    <Screen columns title={site.name} eyebrow={t('home.eyebrow', { county: site.county, state: site.state })}>
       <div className="xl:col-span-2">
         <Countdown />
       </div>
       <Card>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-sm font-bold">Hazard score today</div>
+            <div className="text-sm font-bold">{t('home.score')}</div>
             <div className="text-5xl font-bold leading-tight" data-testid="hazard-score">
               {score.hazard_score.toFixed(1)}
               <span className="text-xl font-normal"> / 10</span>
@@ -35,7 +39,7 @@ export default function SitePage() {
           </div>
           <div className="flex flex-col items-end gap-2">
             <LevelBadge level={score.risk_level} />
-            <span className="text-sm">Site rank {site.rank} (1 = highest risk)</span>
+            <span className="text-sm">{t('home.rank', { rank: site.rank })}</span>
           </div>
         </div>
         <p className="mt-3 text-base leading-relaxed">{score.explanation}</p>
@@ -44,14 +48,14 @@ export default function SitePage() {
             <li key={f.feature} className="flex items-center gap-2">
               <span aria-hidden>{f.contribution >= 0 ? '▲' : '▼'}</span>
               <span>{f.label}</span>
-              <span className="text-sm text-muted-foreground">{f.contribution >= 0 ? 'raises risk' : 'lowers risk'}</span>
+              <span className="text-sm text-muted-foreground">{f.contribution >= 0 ? t('home.raises') : t('home.lowers')}</span>
             </li>
           ))}
         </ul>
       </Card>
 
       <Card className="xl:row-span-2">
-        <h2 className="mb-2 text-lg font-bold">Hazards at your site</h2>
+        <h2 className="mb-2 text-lg font-bold">{t('home.hazards')}</h2>
         <ul className="flex flex-col divide-y-2 divide-border">
           {hazards.map((h) => (
             <li key={h.hazard} className="flex items-center justify-between gap-3 py-2.5">
@@ -66,14 +70,14 @@ export default function SitePage() {
       </Card>
 
       <Card>
-        <h2 className="mb-2 text-lg font-bold">Conditions right now</h2>
+        <h2 className="mb-2 text-lg font-bold">{t('home.conditions')}</h2>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-base">
-          <Stat label="Heat index" value={conditions.heat_index_f} unit="°F" />
-          <Stat label="Wind gusts" value={conditions.wind_gust_mph} unit=" mph" />
-          <Stat label="Rain, last 24 h" value={conditions.rain_24h_in} unit=" in" />
-          <Stat label="Soil moisture" value={conditions.soil_moisture_pct} unit="%" />
+          <Stat label={t('home.heat')} value={conditions.heat_index_f} unit="°F" />
+          <Stat label={t('home.gusts')} value={conditions.wind_gust_mph} unit=" mph" />
+          <Stat label={t('home.rain')} value={conditions.rain_24h_in} unit=" in" />
+          <Stat label={t('home.soil')} value={conditions.soil_moisture_pct} unit="%" />
         </dl>
-        <p className="mt-2 text-sm">Source: {conditions.source}, observed {clock(conditions.observed_at, site.timezone)} {tzAbbrev(site.timezone)}</p>
+        <p className="mt-2 text-sm">{t('home.source', { source: conditions.source, time: clock(conditions.observed_at, site.timezone), tz: tzAbbrev(site.timezone) })}</p>
       </Card>
 
       {USE_MOCKS && (
@@ -81,23 +85,25 @@ export default function SitePage() {
           <DemoControls />
         </div>
       )}
-      <p className="text-sm leading-relaxed xl:col-span-2">Decision support only. Follow your company&apos;s safety procedures and your supervisor&apos;s direction.</p>
+      <p className="text-sm leading-relaxed xl:col-span-2">{t('home.disclaimer')}</p>
     </Screen>
   )
 }
 
 function Stat({ label, value, unit }: { label: string; value: number | null; unit: string }) {
+  const { t } = useT()
   return (
     <div>
       <dt className="text-sm">{label}</dt>
       {/* Missing data is null in the contract: say so, never show 0. */}
-      <dd className="text-xl font-bold">{value == null ? 'No data' : `${value}${unit}`}</dd>
+      <dd className="text-xl font-bold">{value == null ? t('home.noData') : `${value}${unit}`}</dd>
     </div>
   )
 }
 
 /** The centerpiece: runs on the phone's clock, so it keeps counting with no signal. */
 function Countdown() {
+  const { t, lang } = useT()
   const crew = useCrew()
   const { online } = useFreshness()
   const now = useNow(1000)
@@ -115,30 +121,30 @@ function Countdown() {
     return (
       <section data-testid="countdown" aria-live="off" className="rounded-xl border-4 border-[#721c16] bg-destructive p-5 text-destructive-foreground">
         <div className="flex items-center gap-2 text-2xl font-bold">
-          <OctagonAlert className="h-8 w-8" aria-hidden /> STOP WORK
+          <OctagonAlert className="h-8 w-8" aria-hidden /> {t('stop.title')}
         </div>
-        <div className="mt-1 text-lg font-bold">Lightning within 10 miles. Shelter now.</div>
+        <div className="mt-1 text-lg font-bold">{t('stop.why')}</div>
         <div role="timer" data-testid="countdown-time" className="my-3 text-center text-7xl font-bold tabular-nums">{mmss(left)}</div>
         <p className="text-lg">
-          All clear at {clock(stopWorkUntil, tz)} {tzAbbrev(tz)} if there are no new strikes. Every new strike restarts the 30 minutes.
+          {t('stop.clear', { time: clock(stopWorkUntil, tz), tz: tzAbbrev(tz) })}
         </p>
         {detail.site.stop_work.nearest_strike_miles != null && (
-          <p className="mt-1 text-base">Nearest strike {detail.site.stop_work.nearest_strike_miles} miles away. {detail.site.stop_work.strikes_last_30_min} strikes in the last 30 minutes.</p>
+          <p className="mt-1 text-base">{t('stop.nearest', { miles: detail.site.stop_work.nearest_strike_miles, n: t(detail.site.stop_work.strikes_last_30_min === 1 ? 'stop.nearest.one' : 'stop.nearest.many', { n: detail.site.stop_work.strikes_last_30_min }) })}</p>
         )}
         {activeAlert?.simulated && (
           <p className="mt-2 flex items-center gap-2 rounded-lg bg-white px-2 py-1 text-base font-bold text-[#721c16]">
-            <FlaskConical className="h-4 w-4" aria-hidden /> Simulated strike (demo)
+            <FlaskConical className="h-4 w-4" aria-hidden /> {t('stop.simulated')}
           </p>
         )}
         {!online && (
           <p className="mt-2 flex items-center gap-2 rounded-lg bg-white px-2 py-1 text-base font-bold text-[#721c16]">
-            <WifiOff className="h-4 w-4" aria-hidden /> No signal. This clock keeps running, but new strikes will not show until signal returns.
+            <WifiOff className="h-4 w-4" aria-hidden /> {t('stop.offline')}
           </p>
         )}
         {crew.ackedBy.length > 0 && (
           <p data-testid="acked-by" className="mt-3 flex items-start gap-2 text-base font-bold">
             <CircleCheck className="mt-0.5 h-5 w-5 shrink-0" aria-hidden />
-            <span>{crew.ackedBy.length} confirmed stopped: {crew.ackedBy.map((a) => a.user_name || 'A crew member').join(', ')}</span>
+            <span>{t('stop.confirmed', { n: crew.ackedBy.length, names: crew.ackedBy.map((a) => a.user_name || t('stop.crewMember')).join(', ') })}</span>
           </p>
         )}
         {activeAlert && (
@@ -146,7 +152,7 @@ function Countdown() {
             {ackAt ? (
               <p className="flex items-center gap-2 rounded-xl bg-white p-3 text-lg font-bold text-foreground">
                 <CircleCheck className="h-6 w-6 text-success" aria-hidden />
-                You confirmed at {clock(ackAt, tz)}{ackWaiting ? '. Sends when signal returns.' : ''}
+                {t('stop.youConfirmed', { time: clock(ackAt, tz) })}{ackWaiting ? t('stop.sendsLater') : '.'}
               </p>
             ) : (
               <button
@@ -154,7 +160,7 @@ function Countdown() {
                 onClick={() => void crew.acknowledge(activeAlert.alert_id)}
                 className="flex min-h-14 w-full items-center justify-center gap-2 rounded-lg bg-white text-lg font-bold text-[#721c16]"
               >
-                I have stopped work
+                {t('stop.iStopped')}
               </button>
             )}
           </div>
@@ -167,14 +173,14 @@ function Countdown() {
     return (
       <section data-testid="countdown" className="rounded-xl border-4 border-[#1c463d] bg-success p-5 text-white">
         <div className="flex items-center gap-2 text-2xl font-bold">
-          <CircleCheck className="h-8 w-8" aria-hidden /> Countdown finished
+          <CircleCheck className="h-8 w-8" aria-hidden /> {t('stop.doneTitle')}
         </div>
         <p className="mt-2 text-lg">
-          Last strike {ago(detail.site.stop_work.last_strike_at ?? stopWorkUntil, now)}. The 30 minutes ended at {clock(stopWorkUntil, tz)} {tzAbbrev(tz)}.
+          {t('stop.doneBody', { ago: ago(detail.site.stop_work.last_strike_at ?? stopWorkUntil, now, lang), time: clock(stopWorkUntil, tz), tz: tzAbbrev(tz) })}
         </p>
         <p className="mt-2 flex items-start gap-2 rounded-lg bg-white px-2 py-1.5 text-base font-bold text-foreground">
           <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          {online ? 'Wait for your supervisor to say work can restart.' : 'No signal, so new strikes cannot be seen. Check with your supervisor before restarting work.'}
+          {online ? t('stop.waitSup') : t('stop.waitSupOffline')}
         </p>
       </section>
     )
@@ -183,26 +189,27 @@ function Countdown() {
   return (
     <section data-testid="countdown" className="rounded-xl border-4 border-[#1c463d] bg-success p-5 text-white">
       <div className="flex items-center gap-2 text-2xl font-bold">
-        <CircleCheck className="h-8 w-8" aria-hidden /> No stop-work right now
+        <CircleCheck className="h-8 w-8" aria-hidden /> {t('stop.noneTitle')}
       </div>
-      <p className="mt-2 text-lg">No lightning within 10 miles of this site. This screen turns red with a 30-minute countdown if that changes.</p>
+      <p className="mt-2 text-lg">{t('stop.noneBody')}</p>
     </section>
   )
 }
 
 function DemoControls() {
+  const { t } = useT()
   const crew = useCrew()
   const [busy, setBusy] = useState(false)
   const [result, setResult] = useState<'shared' | 'local' | null>(null)
   return (
     <Card className="border-dashed">
       <h2 className="flex items-center gap-2 text-lg font-bold">
-        <FlaskConical className="h-5 w-5" aria-hidden /> Demo controls (simulated)
+        <FlaskConical className="h-5 w-5" aria-hidden /> {t('demo.title')}
       </h2>
-      <p className="mb-3 mt-1 text-sm">Only shown in demo mode. Nothing here touches real conditions. A simulated strike starts the countdown on every signed-in phone.</p>
+      <p className="mb-3 mt-1 text-sm">{t('demo.note')}</p>
       <p data-testid="sync-status" className="mb-3 flex items-center gap-2 text-sm font-bold">
         {crew.syncReady ? <Wifi className="h-4 w-4" aria-hidden /> : <WifiOff className="h-4 w-4" aria-hidden />}
-        {crew.syncReady ? 'Live link to other phones: connected' : 'Live link to other phones: not connected'}
+        {crew.syncReady ? t('demo.linkOn') : t('demo.linkOff')}
       </p>
       <div className="flex flex-col gap-3">
         <BigButton
@@ -213,15 +220,15 @@ function DemoControls() {
             setBusy(false)
           }}
         >
-          Simulate a lightning strike
+          {t('demo.strike')}
         </BigButton>
         {result && (
           <p data-testid="strike-result" role="status" className="rounded-lg bg-caution px-2 py-1.5 text-base font-bold text-foreground">
-            {result === 'shared' ? 'Sent to every phone.' : 'Only on this phone. No live link right now, so other phones did not get it.'}
+            {result === 'shared' ? t('demo.shared') : t('demo.local')}
           </p>
         )}
         <button type="button" onClick={() => void crew.resetDemo()} className="min-h-12 w-full rounded-lg border border-input bg-card text-base font-bold">
-          Reset demo (clears it for everyone at your site)
+          {t('demo.reset')}
         </button>
       </div>
     </Card>

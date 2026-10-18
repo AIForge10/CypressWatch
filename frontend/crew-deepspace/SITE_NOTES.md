@@ -26,3 +26,10 @@ Each crew member sees only their own site.
 - Saved copies on the phone (site data, confirmations, reports, clock, strike) are kept per person AND per site.
 - Reset demo clears only your site's shared strike, confirmations and reports, and only your own saved copy and waiting uploads on this phone.
 - "Did I confirm?" also reads the shared confirmation list, so clearing a phone's storage cannot bring the button back.
+
+## Default demo site (so judges never wait)
+In demo mode, anyone signed in who has no assignment joins the demo site (`DEFAULT_DEMO_SITE` in
+`src/lib/assignment.tsx`, currently `site_012`). An admin can still move them on the Team tab, and choosing
+"Demo site (default)" there puts them back. Everyone on the default site shares live sync, acknowledgements and
+Reset, which also lets a judge use two phones together. In the live (non-mock) app this does not apply: the
+backend's `site_ids` decide.

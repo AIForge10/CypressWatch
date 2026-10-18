@@ -9,6 +9,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import type { RiskLevel } from '../contracts/types'
 import { milesBetween, MILES_VISIBLE } from '../lib/geo'
 import { MAP_STYLE } from '../lib/mapStyle'
+import { useT } from '../lib/i18n'
 
 export interface MapPoint {
   id: string
@@ -48,6 +49,7 @@ function marker(className: string, text: string, label: string, onClick: () => v
 }
 
 export default function SiteMap2D({ name, lat, lon, score, level, points, focus, onUnavailable }: SiteMap2DProps) {
+  const { t, lang } = useT()
   const box = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const markers = useRef<maplibregl.Marker[]>([])
@@ -123,20 +125,21 @@ export default function SiteMap2D({ name, lat, lon, score, level, points, focus,
       return d
     }
     const size = 28 + score * 2
-    const siteEl = marker(`cw-map-marker cw-map-marker-${TONE[level]}`, score.toFixed(1), `${name}, hazard score ${score.toFixed(1)}`, () =>
-      show([lon, lat], info(name, [`Hazard score ${score.toFixed(1)} of 10 · ${level}`])),
+    const siteEl = marker(`cw-map-marker cw-map-marker-${TONE[level]}`, score.toFixed(1), t('map.pop.siteAria', { name, score: score.toFixed(1) }), () =>
+      show([lon, lat], info(name, [t('map.pop.score', { score: score.toFixed(1), level: t(`lv.${level}`).toLowerCase() })])),
     )
     siteEl.style.width = `${size}px`
     siteEl.style.height = `${size}px`
     markers.current.push(new maplibregl.Marker({ element: siteEl, anchor: 'center' }).setLngLat([lon, lat]).addTo(map))
 
     const near = points.filter((p) => milesBetween(lat, lon, p.lat, p.lon) <= MILES_VISIBLE)
-    for (const p of near) {
-      const el = marker(`cw-map-pin ${p.kind === 'waiting' ? 'cw-map-pin-waiting' : ''}`, p.label, `${p.kind === 'waiting' ? 'Waiting to upload' : 'Report'} ${p.label}`, () =>
-        show([p.lon, p.lat], info(p.kind === 'waiting' ? `Waiting to upload (${p.label})` : `Report ${p.label}`, [p.text])),
+    // Every report gets a pin (so tapping one in the list can always fly to it); the first view fits only the nearby ones.
+    for (const p of points) {
+      const el = marker(`cw-map-pin ${p.kind === 'waiting' ? 'cw-map-pin-waiting' : ''}`, p.label, `${p.kind === 'waiting' ? t('map.pop.waiting') : t('map.pop.report')} ${p.label}`, () =>
+        show([p.lon, p.lat], info(p.kind === 'waiting' ? t('map.pop.waitingN', { n: p.label }) : t('map.pop.reportN', { n: p.label }), [p.text])),
       )
       markers.current.push(new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([p.lon, p.lat]).addTo(map))
-      pins.current.set(p.id, { at: [p.lon, p.lat], open: () => show([p.lon, p.lat], info(p.kind === 'waiting' ? `Waiting to upload (${p.label})` : `Report ${p.label}`, [p.text])) })
+      pins.current.set(p.id, { at: [p.lon, p.lat], open: () => show([p.lon, p.lat], info(p.kind === 'waiting' ? t('map.pop.waitingN', { n: p.label }) : t('map.pop.reportN', { n: p.label }), [p.text])) })
     }
     if (near.length === 0) {
       map.easeTo({ center: [lon, lat], zoom: 15, duration: 0 })
@@ -145,7 +148,8 @@ export default function SiteMap2D({ name, lat, lon, score, level, points, focus,
       near.forEach((p) => b.extend([p.lon, p.lat]))
       map.fitBounds(b, { padding: { top: 56, left: 56, right: 56, bottom: 76 }, maxZoom: 17, duration: 0 })
     }
-  }, [name, lat, lon, score, level, points])
+    // `t` changes only with the language, so the pins are redrawn in the new language.
+  }, [name, lat, lon, score, level, points, lang])
 
   // A report was picked in the list: fly to it and open its note.
   useEffect(() => {
@@ -158,5 +162,5 @@ export default function SiteMap2D({ name, lat, lon, score, level, points, focus,
     // Only a new request (focus.n) counts, not later redraws of the same points.
   }, [focus?.n])
 
-  return <div ref={box} className="cw-interactive-map h-80 w-full xl:h-[26rem] overflow-hidden rounded-lg" aria-label={`Street map of ${name} and hazard reports near it`} />
+  return <div ref={box} className="cw-interactive-map h-80 w-full xl:h-[26rem] overflow-hidden rounded-lg" aria-label={t('map.aria', { name })} />
 }

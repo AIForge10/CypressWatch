@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { MAP_STYLE } from '../lib/mapStyle'
+import { useT } from '../lib/i18n'
 
 export interface Pin {
   lat: number
@@ -13,6 +14,9 @@ export interface Pin {
 }
 
 export default function LocationPicker({ siteLat, siteLon, pin, onPick, onUnavailable }: { siteLat: number; siteLon: number; pin: Pin | null; onPick: (p: Pin) => void; onUnavailable: () => void }) {
+  const { t } = useT()
+  const tRef = useRef(t)
+  tRef.current = t
   const box = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
   const marker = useRef<maplibregl.Marker | null>(null)
@@ -36,14 +40,14 @@ export default function LocationPicker({ siteLat, siteLon, pin, onPick, onUnavai
     // The site itself, so people can find their way around.
     const siteEl = document.createElement('div')
     siteEl.className = 'cw-pick-site'
-    siteEl.setAttribute('aria-label', 'Site center')
+    siteEl.setAttribute('aria-label', tRef.current('rep.pickerCenter'))
     new maplibregl.Marker({ element: siteEl, anchor: 'center' }).setLngLat([siteLon, siteLat]).addTo(map)
     const place = (lat: number, lon: number) => {
       const p = { lat: Number(lat.toFixed(5)), lon: Number(lon.toFixed(5)) }
       if (!marker.current) {
         const el = document.createElement('div')
         el.className = 'cw-pick-pin'
-        el.setAttribute('aria-label', 'Hazard location')
+        el.setAttribute('aria-label', tRef.current('rep.pickerPin'))
         marker.current = new maplibregl.Marker({ element: el, anchor: 'center', draggable: true }).setLngLat([p.lon, p.lat]).addTo(map)
         marker.current.on('dragend', () => {
           const ll = marker.current!.getLngLat()
@@ -84,5 +88,5 @@ export default function LocationPicker({ siteLat, siteLon, pin, onPick, onUnavai
     }
   }, [pin])
 
-  return <div ref={box} className="cw-interactive-map h-72 w-full overflow-hidden rounded-lg" aria-label="Street map. Tap where the hazard is." />
+  return <div ref={box} className="cw-interactive-map h-72 w-full overflow-hidden rounded-lg" aria-label={t('rep.pickerLabel')} />
 }

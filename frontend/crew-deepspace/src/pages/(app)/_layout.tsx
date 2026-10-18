@@ -22,16 +22,18 @@ import { RecordProvider, RecordScope } from 'deepspace'
 import CrewShell from '../../components/CrewShell'
 import { FreshnessProvider, useFreshness } from '../../lib/freshness'
 import { CrewDataProvider, USE_MOCKS } from '../../lib/crewData'
-import { AssignmentBridge, AssignmentContext, readCachedAssignment, UNKNOWN, type AssignmentState } from '../../lib/assignment'
+import { AssignmentBridge, AssignmentContext, DEFAULT_DEMO_SITE, readCachedAssignment, UNKNOWN, type AssignmentState } from '../../lib/assignment'
 import { useCrewAccess } from '../../lib/access'
 import { RecordsReadyContext } from '../../lib/sync'
 import { SignedOutPanel, SiteWaitPanel } from '../../components/SignedOutPanel'
 import { useToast } from '@/components/ui'
 import { APP_NAME, SCOPE_ID } from '../../constants'
 import { schemas } from '../../schemas'
+import { useT } from '../../lib/i18n'
 
 /** Sign-in gate + site assignment + data + shell. Inside the auth and freshness providers. */
 function CrewApp() {
+  const { t } = useT()
   const { online } = useFreshness()
   const access = useCrewAccess(online)
   const recordsReady = useContext(RecordsReadyContext)
@@ -40,7 +42,10 @@ function CrewApp() {
   const cached = useMemo(() => (USE_MOCKS ? readCachedAssignment(access.userId) : null), [access.userId])
   const [live, setLive] = useState<AssignmentState | null>(null)
   const onAssignment = useCallback((s: AssignmentState) => setLive(s), [])
-  const asg: AssignmentState = !USE_MOCKS ? { loaded: true, siteId: null, isAdmin: false } : (live ?? cached ?? UNKNOWN)
+  const known: AssignmentState = !USE_MOCKS ? { loaded: true, siteId: null, isAdmin: false } : (live ?? cached ?? UNKNOWN)
+  // No assignment yet? Join the demo site, so a first-time visitor never sits on a waiting screen.
+  const useDefault = USE_MOCKS && known.loaded && !known.siteId
+  const asg: AssignmentState = useDefault ? { ...known, siteId: DEFAULT_DEMO_SITE, isDefault: true } : known
   const needSite = USE_MOCKS && access.allowed && asg.loaded && !asg.siteId
   const waitSite = USE_MOCKS && access.allowed && !asg.loaded
   const onTeam = pathname === '/team' && asg.isAdmin
@@ -66,7 +71,7 @@ function CrewApp() {
           ) : needSite ? (
             <SiteWaitPanel mode="none" online={online} isAdmin={asg.isAdmin} />
           ) : (
-            <Suspense fallback={<div className="flex h-full items-center justify-center text-muted-foreground">Loading...</div>}>
+            <Suspense fallback={<div className="flex h-full items-center justify-center text-muted-foreground">{t('loading')}</div>}>
               <Outlet />
             </Suspense>
           )}
