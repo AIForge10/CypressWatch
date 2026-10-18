@@ -8,7 +8,8 @@ Identity, roles, site assignments, and step-up MFA are derived only from an
 Auth0-signed Bearer access token. Client-provided identity or MFA headers are
 never trusted.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
+import hmac
 from pathlib import Path
 import sqlite3
 import sys
@@ -17,6 +18,21 @@ from app.auth import AuthenticatedUser, get_current_user, require_roles, require
 from cypress_workers.common import ALERT_ACTIONS_FILE, STOP_WORK_FILE, now_iso, read_json, write_json
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
+
+
+@router.get("/beacon/{site_id}")
+def beacon_state(site_id: str, x_beacon_key: str | None = Header(None)):
+    """Site Beacon bridge (hardware): this site's lightning stop-work state only. The Arduino bridge cannot sign
+    in with Auth0, so it sends X-Beacon-Key (BEACON_KEY on the server). Read-only; no other data is exposed."""
+    from app.core.config import settings
+    if not settings.beacon_key or not x_beacon_key or not hmac.compare_digest(x_beacon_key, settings.beacon_key):
+        raise HTTPException(status_code=401, detail={"error": "unauthorized", "message": "Valid X-Beacon-Key required."})
+    for alert in read_json(STOP_WORK_FILE, {"alerts": []}).get("alerts", []):
+        if (alert.get("site_id") == site_id and alert.get("status") == "active"
+                and alert.get("type", "stop_work_lightning") == "stop_work_lightning" and alert.get("stop_work_until")):
+            return {"site_id": site_id, "active": True, "stop_work_until": alert["stop_work_until"],
+                    "simulated": bool(alert.get("simulated")), "server_time": now_iso()}
+    return {"site_id": site_id, "active": False, "stop_work_until": None, "simulated": False, "server_time": now_iso()}
 
 LEDGER_DB = Path(__file__).resolve().parents[3] / "ledger" / "data" / "ledger.db"
 

@@ -15,12 +15,17 @@ Usage (from the repo root):
     python hardware/site-beacon/bridge/bridge.py --site site_6043 --port COM5          # live (default)
     python hardware/site-beacon/bridge/bridge.py --site site_6043 --ml-score           # secondary signal mode
 Without a serial port attached, add --no-device to just print what would be sent.
+
+Against the deployed backend (the engine runs on the server, not this laptop):
+    python hardware/site-beacon/bridge/bridge.py --site site_6043 --port auto \
+        --server https://64-177-55-82.sslip.io --key <BEACON_KEY>
 """
 import argparse
 import datetime
 import json
 import sys
 import time
+import urllib.request
 from pathlib import Path
 
 BRIDGE_DIR = Path(__file__).resolve().parent
@@ -51,10 +56,47 @@ def active_stop_remaining(state_file: Path, site_id: str):
     """Seconds left on the site's active stop-work, or None when it is not active."""
     data = json.loads(state_file.read_text())
     for alert in data.get("alerts", []):
-        if alert["site_id"] == site_id and alert.get("status") == "active":
+        # flood_risk warnings are active too but carry no stop-work countdown
+        if (alert["site_id"] == site_id and alert.get("status") == "active"
+                and alert.get("type", "stop_work_lightning") == "stop_work_lightning" and alert.get("stop_work_until")):
             until = datetime.datetime.fromisoformat(alert["stop_work_until"].replace("Z", "+00:00"))
             return max(0, int((until - datetime.datetime.now(datetime.timezone.utc)).total_seconds()))
     return None
+
+
+def server_stop_remaining(server: str, key: str, site_id: str):
+    """Same as active_stop_remaining, but from the deployed API (GET /api/alerts/beacon/{site_id})."""
+    req = urllib.request.Request(f"{server.rstrip('/')}/api/alerts/beacon/{site_id}",
+                                 headers={"X-Beacon-Key": key, "User-Agent": "cypresswatch-beacon/1.0"})
+    with urllib.request.urlopen(req, timeout=8) as res:
+        state = json.loads(res.read())
+    if not state.get("active"):
+        return None
+    until = datetime.datetime.fromisoformat(state["stop_work_until"].replace("Z", "+00:00"))
+    now = datetime.datetime.fromisoformat(state["server_time"].replace("Z", "+00:00"))  # server clock, no skew
+    return max(0, int((until - now).total_seconds()))
+
+
+def run_server_mode(args, send) -> None:
+    """Follow the deployed engine over HTTPS; a network blip keeps the last state instead of clearing it."""
+    print(f"following {args.site} on {args.server}", file=sys.stderr)
+    was_active, last_sent = False, 0.0
+    while True:
+        try:
+            remaining = server_stop_remaining(args.server, args.key, args.site)
+        except urllib.error.HTTPError as exc:
+            print(f"warning: server answered {exc.code} (check --key / BEACON_KEY)", file=sys.stderr)
+            time.sleep(max(args.interval, 5)); continue
+        except (OSError, ValueError, KeyError) as exc:
+            print(f"warning: server unreachable ({exc}); keeping last state", file=sys.stderr)
+            time.sleep(max(args.interval, 5)); continue
+        active = remaining is not None and remaining > 0
+        if active and (not was_active or time.time() - last_sent > 60):  # start, or refresh the countdown each minute
+            send(f"STRIKE {max(remaining, 60)}"); last_sent = time.time()
+        elif not active and was_active:
+            send("ALLCLEAR")
+        was_active = active
+        time.sleep(args.interval)
 
 
 def run_live_mode(args, send) -> None:
@@ -135,17 +177,46 @@ def run_ml_mode(args, send) -> None:
         time.sleep(args.interval)
 
 
+BOARD_HINTS = ("usbmodem", "usbserial", "ttyACM", "ttyUSB", "wchusbserial", "Arduino", "CH340")
+
+
+def resolve_port(requested: str):
+    """Use the requested port if it exists, else fall back to the one attached board.
+
+    Lets the same command work across machines (COM7 on Windows, /dev/cu.usbmodem* on macOS).
+    """
+    from serial.tools import list_ports
+    ports = list(list_ports.comports())
+    if requested == "auto" or requested not in {p.device for p in ports}:
+        boards = [p for p in ports
+                  if any(h.lower() in f"{p.device} {p.description}".lower() for h in BOARD_HINTS)]
+        if len(boards) == 1:
+            if requested != "auto":
+                print(f"note: {requested} not found; using {boards[0].device} ({boards[0].description})",
+                      file=sys.stderr)
+            return boards[0].device
+        print(f"error: serial port {requested!r} not found. Available ports:", file=sys.stderr)
+        for p in ports:
+            print(f"  {p.device}  ({p.description})", file=sys.stderr)
+        return None
+    return requested
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Feed live stop-work decisions (or the ML readout) to the beacon.")
     ap.add_argument("--site", required=True, help="site_id, e.g. site_6043")
     ap.add_argument("--ml-score", action="store_true",
                     help="secondary mode: LCD shows the ML hazard score; it NEVER authorizes a stop-work")
-    ap.add_argument("--port", default=None, help="COM5, /dev/ttyUSB0, ... (omit with --no-device)")
+    ap.add_argument("--port", default=None, help="COM5, /dev/cu.usbmodem*, /dev/ttyUSB0, or 'auto' (omit with --no-device)")
     ap.add_argument("--baud", type=int, default=9600)
     ap.add_argument("--interval", type=float, default=1.0, help="state poll interval in seconds (live mode)")
     ap.add_argument("--trigger", type=float, default=8.0, help="[ml mode] score that narrows the readout tone")
     ap.add_argument("--no-device", action="store_true", help="dry run: print commands instead of writing serial")
+    ap.add_argument("--server", default=None, help="deployed API, e.g. https://64-177-55-82.sslip.io (reads its engine)")
+    ap.add_argument("--key", default=None, help="BEACON_KEY configured on the server (with --server)")
     args = ap.parse_args()
+    if args.server and not args.key:
+        ap.error("--key is required with --server")
 
     if not args.no_device and not args.port:
         ap.error("--port is required unless --no-device is given")
@@ -153,7 +224,10 @@ def main() -> int:
     device = None
     if not args.no_device:
         import serial
-        device = serial.Serial(args.port, args.baud, timeout=2)
+        port = resolve_port(args.port)
+        if port is None:
+            return 1
+        device = serial.Serial(port, args.baud, timeout=2)
         time.sleep(2.0)  # Uno boards reset when the port opens
 
     def send(cmd: str) -> None:
@@ -165,6 +239,8 @@ def main() -> int:
     try:
         if args.ml_score:
             run_ml_mode(args, send)
+        elif args.server:
+            run_server_mode(args, send)
         else:
             run_live_mode(args, send)
     except KeyboardInterrupt:
