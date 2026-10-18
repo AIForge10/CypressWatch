@@ -1,4 +1,4 @@
-# Database: Tiger Data / TimescaleDB (M4)
+# Database: Tiger Data / TimescaleDB
 
 - `migrations/`: plain SQL, applied in filename order. **Name files with a UTC timestamp**
   (`20261017T0130_create_conditions.sql`) so two people never create the same number.

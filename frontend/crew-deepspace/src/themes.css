@@ -69,7 +69,7 @@
   --color-destructive: #9f1a10;         /* stop-work red. Kept apart from the terracotta brand color on purpose */
   --color-destructive-foreground: #ffffff;
   --color-border: #cbdde0;              /* --cw-border */
-  --color-input: #6f8c91;               /* darker than M1's border: form fields need 3:1 against white */
+  --color-input: #6f8c91;               /* darker than the supervisor app's border: form fields need 3:1 against white */
   --color-ring: #353531;                /* dark focus ring so it shows in sunlight */
   --color-success: #2f6f63;             /* --cw-success #5b8f86, darkened for white text (5.9:1) */
   --color-success-foreground: #ffffff;

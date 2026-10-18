@@ -52,7 +52,7 @@ The backend is live on Vultr and accepts DeepSpace sign-in tokens for crew (no A
    ```
 2. Deploy again (`npx deepspace deploy`). No screen code changes.
 3. Crew members must be on the backend's crew list (`CREW_ASSIGNMENTS`, email → site), or they see
-   "not on the CypressWatch crew list" (403). Send their Google emails to M3/M4 to be added.
+   "not on the CypressWatch crew list" (403). Send their Google emails to the backend team to be added.
 
 ## Where things are (so you can find your way around)
 

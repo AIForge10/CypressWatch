@@ -1,22 +1,22 @@
-# CypressWatch: Backend (M3 + M4)
+# CypressWatch: Backend
 
 Python 3.11 services, the ML model, the Solana ledger, and the database.
 
 ```
 backend/
-├── api/               M4  FastAPI. Routers are pre-registered in app/main.py; each owner edits only their file:
+├── api/   FastAPI. Routers are pre-registered in app/main.py; each owner edits only their file:
 │   └── app/
-│       ├── auth/             M1  Auth0 JWT verification, roles, step-up MFA
+│       ├── auth/   Auth0 JWT verification, roles, step-up MFA
 │       └── routers/
-│           ├── sites.py, alerts.py, simulate.py    M4
-│           ├── scores.py, briefings.py, ledger.py  M3
-│           └── reports.py                          M2  (crew photo upload)
-├── workers/           M4  ingestion pollers, lightning + flood engines, 6 PM scheduler
-├── ai/                M3  Gemini: EN/ES briefing, photo triage, score explanations, evals
-├── ml/                M3  hazard-index model: data, notebooks, training, SHAP, reports
-├── ledger/            M3  Solana Safety Ledger: Merkle hashing + Anchor program (devnet)
-├── db/                M4  TimescaleDB migrations + seeds
-├── data/              M4  static inputs (EIA-860M plant list)
+│           ├── sites.py, alerts.py, simulate.py
+│           ├── scores.py, briefings.py, ledger.py
+│           └── reports.py   (crew photo upload)
+├── workers/   ingestion pollers, lightning + flood engines, 6 PM scheduler
+├── ai/   Gemini: EN/ES briefing, photo triage, score explanations, evals
+├── ml/   hazard-index model: data, notebooks, training, SHAP, reports
+├── ledger/   Solana Safety Ledger: Merkle hashing + Anchor program (devnet)
+├── db/   TimescaleDB migrations + seeds
+├── data/   static inputs (EIA-860M plant list)
 ├── docker-compose.yml     local TimescaleDB + PostGIS (port 5433)
 ├── environment.yml        conda env
 └── requirements.txt       includes every area's own requirements.txt
@@ -81,7 +81,7 @@ score. Site assignments in Auth0 must use IDs from `data/sites/sites.json`.
 Add the name to **your area's** `requirements.txt` (e.g. `ml/requirements.txt`), then run
 `pip install -r requirements.txt` from `backend/`.
 
-## Solana / Anchor (M3 only)
+## Solana / Anchor
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y   # Rust

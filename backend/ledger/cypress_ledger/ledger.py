@@ -18,7 +18,7 @@ Usage (from the repo root, conda env active; pip install solders requests):
     python backend/ledger/cypress_ledger/ledger.py verify rec_1a2b3c4d
     python backend/ledger/cypress_ledger/ledger.py status
 
-From Python (M4):
+From Python:
     from cypress_ledger.ledger import Ledger
     ledger = Ledger()
     rec_id = ledger.record("stop_work", "site_6043", {"alert_id": "alt_7f3a", "reason": "lightning", ...})

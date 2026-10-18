@@ -1,4 +1,4 @@
-"""Hazard index 0–10, model card, and Tiger Data insights (owner: M3).
+"""Hazard index 0–10, model card, and Tiger Data insights.
 
 GET /api/health                       -> {"ok": true}
 GET /api/me                           -> Me: who the Auth0 access token belongs to, its role and site_ids
@@ -69,7 +69,7 @@ def insights(site_id: str, user: AuthenticatedUser = Depends(get_current_user)):
             "stop_work": db.stop_work_status(site_id), "risk_trend_7d": db.risk_trend(site_id, 7)}
 
 # =============================================================================================
-# Tiger Data proof panel (owner: M3):  GET /api/tiger
+# Tiger Data proof panel:  GET /api/tiger
 # Live from Tiger Cloud: hypertables, chunks, compression savings, continuous aggregates,
 # background jobs (refresh / compression / retention) and extensions.
 # =============================================================================================

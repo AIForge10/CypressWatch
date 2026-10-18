@@ -1,4 +1,4 @@
-# Hazard-index model (M3)
+# Hazard-index model
 
 - `data/raw/`: downloads (NOAA Storm Events, OSHA, Open-Meteo archive). Git-ignored.
 - `data/processed/`: training tables. Git-ignored.

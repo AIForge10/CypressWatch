@@ -81,8 +81,8 @@ Have your own domain? Point an A record at the IP and add `--domain api.yourdoma
 
 ### 4b. Point the apps at it
 - Supervisor: `VITE_API_URL=https://<ip-with-dashes>.sslip.io` in `frontend/supervisor/.env.local`, restart `npm run dev`.
-- Crew (M2): same `VITE_API_URL`, plus `VITE_USE_MOCKS=false`.
-- Auth0 (M1): nothing changes for the API; the supervisor app still runs from `localhost:5173`.
+- Crew: same `VITE_API_URL`, plus `VITE_USE_MOCKS=false`.
+- Auth0: nothing changes for the API; the supervisor app still runs from `localhost:5173`.
 
 ### Redeploy after code changes
 ```bash

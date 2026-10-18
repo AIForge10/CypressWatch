@@ -163,7 +163,7 @@ for i in $(seq 1 20); do
 
 Next:
   - Supervisor app: https://$DOMAIN (with --frontend), or VITE_API_URL=https://$DOMAIN for local development
-  - Crew app (M2):  VITE_API_URL=https://$DOMAIN and VITE_USE_MOCKS=false
+  - Crew app:  VITE_API_URL=https://$DOMAIN and VITE_USE_MOCKS=false
   - Settings:       ssh $SSH_USER@$HOST_IP, edit /etc/cypresswatch.env, then: systemctl restart cypresswatch.target
   - Logs:           ssh $SSH_USER@$HOST_IP journalctl -u cypresswatch-api -f
 EOF

@@ -1,4 +1,4 @@
-# Hazard-index model: training, evals, SHAP (M3).
+# Hazard-index model: training, evals, SHAP.
 pandas
 numpy
 pyarrow

@@ -1,4 +1,4 @@
-/* Shared design tokens (colors, spacing, type). M1 + M2 agree on changes here. */
+/* Shared design tokens (colors, spacing, type). Both frontends agree on changes here. */
 :root {
   font-family: "Open Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #353531;

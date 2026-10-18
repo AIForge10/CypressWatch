@@ -48,7 +48,7 @@ for _ in $(seq 1 40); do curl -sf -m 5 "$URL/health" >/dev/null && break; sleep 
 cat <<EOF
 
 Public API: $URL   (docs: $URL/docs, live feed: ${URL/https/wss}/api/ws)
-  Crew app (M2):  VITE_API_URL=$URL  and  VITE_USE_MOCKS=false, then redeploy the crew app
+  Crew app:  VITE_API_URL=$URL  and  VITE_USE_MOCKS=false, then redeploy the crew app
   Supervisor:     keep http://localhost:$PORT (faster), or use the public URL on another machine
 This URL changes every time the tunnel restarts. Keep this window open; Ctrl+C stops everything.
 EOF

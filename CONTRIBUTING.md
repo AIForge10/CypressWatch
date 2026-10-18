@@ -4,11 +4,11 @@
 
 | Team | Member | Owns |
 |---|---|---|
-| **Frontend** | **M1** Supervisor | `frontend/supervisor/`, `backend/api/app/auth/` (Auth0 middleware) |
-| | **M2** Crew | `frontend/crew-deepspace/`, `backend/api/app/routers/reports.py` (upload endpoint), `hardware/` |
-| | M1 + M2 | `frontend/packages/ui/` (shared components + colors) |
-| **Backend** | **M3** AI/ML + Solana | `backend/ml/`, `backend/ai/`, `backend/ledger/`, routers `scores.py`, `briefings.py`, `ledger.py` |
-| | **M4** Platform | everything else in `backend/` (api, workers, db, data), `docs/api-contract.md`, `frontend/packages/shared/` |
+| **Frontend** | Supervisor | `frontend/supervisor/`, `backend/api/app/auth/` (Auth0 middleware) |
+| | Crew | `frontend/crew-deepspace/`, `backend/api/app/routers/reports.py` (upload endpoint), `hardware/` |
+| | Both frontends | `frontend/packages/ui/` (shared components + colors) |
+| **Backend** | AI/ML + Solana | `backend/ml/`, `backend/ai/`, `backend/ledger/`, routers `scores.py`, `briefings.py`, `ledger.py` |
+| | Platform | everything else in `backend/` (api, workers, db, data), `docs/api-contract.md`, `frontend/packages/shared/` |
 
 `.github/CODEOWNERS` enforces this on GitHub. If you must touch someone else's folder,
 message them first.
@@ -24,13 +24,13 @@ message them first.
 
 | File | Rule |
 |---|---|
-| `docs/api-contract.md` + `frontend/packages/shared/src` | **The only bridge between frontend and backend.** Agree on an endpoint here first; frontend mocks it while backend builds it. M4 merges changes. |
+| `docs/api-contract.md` + `frontend/packages/shared/src` | **The only bridge between frontend and backend.** Agree on an endpoint here first; frontend mocks it while backend builds it. Platform merges changes. |
 | `backend/api/app/main.py` | Every router is pre-registered. Add endpoints in **your router file**, don't edit `main.py`. |
 | `backend/requirements.txt` | Only `-r` includes. Add Python packages to **your area's** `requirements.txt`. |
 | `frontend/package.json` | Supervisor/shared packages use the root npm workspace. The crew app has its own manifest and lockfile: install crew packages from `frontend/crew-deepspace/`. |
 | `frontend/package-lock.json` | On conflict, resolve the manifest first, then regenerate the lockfile with `npm install --package-lock-only` in `frontend/`. Crew has a separate lockfile. |
 | `backend/db/migrations/` | New file per change, named with a UTC timestamp (`20261017T0130_add_alerts.sql`). Never edit a merged migration. |
-| `frontend/packages/ui/` | M1 + M2 agree before changing tokens or a shared component's props. |
+| `frontend/packages/ui/` | Both frontends agree before changing tokens or a shared component's props. |
 
 ## 4. Secrets
 

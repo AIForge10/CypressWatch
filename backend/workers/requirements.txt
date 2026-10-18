@@ -1,4 +1,4 @@
-# Ingestion workers, lightning/flood alert engines, 6 PM scheduler (M4).
+# Ingestion workers, lightning/flood alert engines, 6 PM scheduler.
 apscheduler<4
 httpx
 requests                  # Open-Meteo, NOAA, USGS, and NWS ingestion

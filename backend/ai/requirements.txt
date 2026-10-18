@@ -1,4 +1,4 @@
-# Gemini: 6 PM briefing (EN/ES), hazard-photo triage, score explanations (M3).
+# Gemini: 6 PM briefing (EN/ES), hazard-photo triage, score explanations.
 google-genai
 pydantic
 pillow

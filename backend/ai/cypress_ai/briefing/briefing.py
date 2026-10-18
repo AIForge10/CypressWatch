@@ -5,7 +5,7 @@
 #     python backend/ai/cypress_ai/briefing/briefing.py --site site_6043   # one site
 #     python backend/ai/cypress_ai/briefing/briefing.py                    # all sites
 
-# From Python (M4's 6 PM scheduler, per site time zone):
+# From Python:
 #     from cypress_ai.briefing.briefing import generate_briefing
 #     result = generate_briefing(site, weather_record, tomorrow_score)   # result["en"], result["es"]
 
@@ -389,7 +389,7 @@ Usage (from the repo root, conda env active), after weather_live.py and score.py
     python backend/ai/cypress_ai/briefing/briefing.py --site site_6043   # one site
     python backend/ai/cypress_ai/briefing/briefing.py                    # all sites
 
-From Python (M4's 6 PM scheduler, per site time zone):
+From Python:
     from cypress_ai.briefing.briefing import generate_briefing
     result = generate_briefing(site, weather_record, tomorrow_score)   # result["en"], result["es"]
 

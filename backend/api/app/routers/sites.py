@@ -1,4 +1,4 @@
-"""Sites summary for the supervisor overview (owner: M4): sites.json + live scores + stop-works
+"""Sites summary for the supervisor overview: sites.json + live scores + stop-works
 in one request, so the dashboard does not stitch three files together in the browser."""
 from datetime import datetime, timezone
 
@@ -60,7 +60,7 @@ def summary(user: AuthenticatedUser = Depends(get_current_user)) -> dict:
         })
     return {"server_time": now_iso(), "sites": out}
 # =============================================================================================
-# Contract endpoints (owner: M3) — ADDED below M4's /summary. Nothing above this line changed.
+# Contract endpoints — ADDED below Platform's /summary. Nothing above this line changed.
 #   GET /api/sites                    -> SitesResponse
 #   GET /api/sites/{site_id}          -> SiteDetail (+ days_like_today, storm_approach)
 #   GET /api/sites/{site_id}/history  -> SiteHistory

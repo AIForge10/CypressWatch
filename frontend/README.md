@@ -1,14 +1,14 @@
-# CypressWatch: Frontend (M1 + M2)
+# CypressWatch: Frontend
 
 The supervisor app and shared packages use npm workspaces. The DeepSpace crew app is a separate project with its own dependencies, lockfile, sign-in, and development command.
 
 ```
 frontend/
-├── supervisor/        M1  risk map, ranked list, site page, charts, Solana Verify page, Auth0 login   → :5173
-├── crew-deepspace/    M2  offline-first crew PWA, DeepSpace sign-in and live sync (standalone)
+├── supervisor/   risk map, ranked list, site page, charts, Solana Verify page, Auth0 login   → :5173
+├── crew-deepspace/   offline-first crew PWA, DeepSpace sign-in and live sync (standalone)
 └── packages/
-    ├── ui/            M1+M2  shared components + color tokens (import from '@cypresswatch/ui')
-    └── shared/        M4     API types matching docs/api-contract.md (import from '@cypresswatch/shared')
+    ├── ui/   shared components + color tokens (import from '@cypresswatch/ui')
+    └── shared/   API types matching docs/api-contract.md (import from '@cypresswatch/shared')
 ```
 
 **Supervisor stack:** React, Vite, TypeScript, MapLibre GL + react-map-gl, React Router, Auth0 React SDK, Recharts, and `@solana/web3.js`. The crew app's own stack and setup are documented in [`crew-deepspace/START_HERE.md`](crew-deepspace/START_HERE.md).
@@ -42,8 +42,8 @@ The supervisor login page links to the deployed crew app. Set `VITE_CREW_APP_URL
 
 ```bash
 cd frontend
-npm install <pkg> -w @cypresswatch/supervisor   # M1
-cd crew-deepspace && npm install <pkg>          # M2 (standalone app)
+npm install <pkg> -w @cypresswatch/supervisor
+cd crew-deepspace && npm install <pkg>
 ```
 
 `npm warn allow-scripts …` during install is harmless (optional native speedups). On a

@@ -4,7 +4,7 @@ Usage (from the repo root, conda env active):
     python backend/ai/cypress_ai/triage/triage.py path/to/photo.jpg
     python backend/ai/cypress_ai/triage/triage.py photo.jpg --note "Gator by the culvert" --hazard wildlife
 
-From Python (M4, inside POST /api/reports, after saving the photo):
+From Python:
     from cypress_ai.triage.triage import triage_photo
     result = triage_photo(photo_bytes, note=data["note"], reporter_hazard=data.get("reporter_hazard"))
     report["triage"] = result["triage"]   # matches Triage in contracts/types.ts (None = no hazard found)

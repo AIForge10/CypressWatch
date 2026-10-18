@@ -14,5 +14,5 @@ Fallback that keeps "never add a second login": crews use the DeepSpace login; A
 supervisor side (roles + step-up MFA in our API middleware).
 
 Contract v0.1 note: it assumes every API call carries an Auth0 bearer token and goes to a separate REST
-backend. Decide with M1/M4 whether crew uses Auth0 for REST (DeepSpace only for live sync) or the
+backend. Decide with Supervisor/Platform whether crew uses Auth0 for REST (DeepSpace only for live sync) or the
 backend accepts DeepSpace tokens for crew.

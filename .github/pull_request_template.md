@@ -2,7 +2,7 @@
 <!-- One or two lines. -->
 
 ## Owner / area
-- [ ] M1 supervisor  - [ ] M2 crew  - [ ] M3 AI/ML/Solana  - [ ] M4 backend/platform
+- [ ] Supervisor supervisor  - [ ] Crew crew  - [ ] AI/ML AI/ML/Solana  - [ ] Platform backend/platform
 
 ## Checklist
 - [ ] Only touches folders I own (or I pinged the owner)

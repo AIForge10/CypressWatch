@@ -1,6 +1,6 @@
 # Live sync between phones (demo mode)
 
-Built on DeepSpace records. Works only when `VITE_USE_MOCKS=true`. In real mode the backend (M4) owns
+Built on DeepSpace records. Works only when `VITE_USE_MOCKS=true`. In real mode the backend owns
 stop-work, confirmations and reports, so this layer is switched off.
 
 ## What syncs

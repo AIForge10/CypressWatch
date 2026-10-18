@@ -1,4 +1,4 @@
-# Workers (M4)
+# Workers
 
 Ingestion pollers, the deterministic alert engines, and the 6 PM scheduler. Runs on Vultr.
 

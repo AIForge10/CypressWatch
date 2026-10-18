@@ -1,6 +1,6 @@
 """Shared state files, site data and small helpers used by the workers, engines and API.
 
-The whole backend (M4) talks over JSON files under backend/workers/data/live/:
+The whole backend talks over JSON files under backend/workers/data/live/:
   weather_latest.json, scores_latest.json, lightning_latest.json  - ingest snapshots
   stop_work.json        - alert state; ONLY engines/lightning.py writes this
   events.json           - append-only live event log (contract live_events.json shape)
