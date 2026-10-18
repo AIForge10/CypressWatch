@@ -4,7 +4,7 @@
 > score per job site, stops work the moment lightning gets close, and keeps a tamper-proof safety
 > record every company on the project can verify.
 
-Built for **Sperry Tech PlanIT Control** at SwampHacks XII. The full plan is in [`docs/plan.pdf`](docs/plan.pdf).
+Built for **Sperry Tech PlanIT Control** at SwampHacks XII.
 
 ## Live demo
 
@@ -60,7 +60,7 @@ CypressWatch/
 │   ├── ai/   Gemini briefing, photo triage, explanations
 │   └── ledger/   Solana Safety Ledger
 ├── hardware/site-beacon/   optional Arduino beacon (decided at hour 16)
-├── docs/                       plan.pdf, architecture.md, api-contract.md ← frontend ↔ backend agreement
+├── docs/                       architecture.md, api-contract.md ← frontend ↔ backend agreement
 └── scripts/                    setup.sh, check-env.sh  (take `frontend` / `backend` / nothing = both)
 ```
 
