@@ -1,0 +1,77 @@
+{
+  "briefing_id": "brf_012_20261018",
+  "site_id": "site_012",
+  "for_date": "2026-10-18",
+  "generated_at": "2026-10-17T22:00:00Z",
+  "language": "es",
+  "available_languages": [
+    "en",
+    "es"
+  ],
+  "headline": "Riesgo alto mañana: empiece temprano y termine a las 11 AM.",
+  "hazard_score_forecast": 7.6,
+  "risk_level": "high",
+  "best_work_window": {
+    "date": "2026-10-18",
+    "start_local": "06:00",
+    "end_local": "11:00",
+    "reason": "El índice de calor se mantiene bajo 100 °F y la probabilidad de tormenta bajo 20 % hasta las 11 AM."
+  },
+  "items": [
+    {
+      "hazard": "lightning",
+      "level": "high",
+      "text": "Se esperan tormentas eléctricas después de la 1 PM (70 % de probabilidad). Cualquier rayo a menos de 10 millas detiene el trabajo por 30 minutos.",
+      "source_ids": [
+        "src_2"
+      ]
+    },
+    {
+      "hazard": "heat",
+      "level": "high",
+      "text": "El índice de calor llega a 106 °F a la 1 PM. Planee pausas para tomar agua y descansar a la sombra cada hora.",
+      "source_ids": [
+        "src_1"
+      ]
+    },
+    {
+      "hazard": "soil_saturation",
+      "level": "moderate",
+      "text": "El suelo sigue saturado por la lluvia de esta semana. Habrá lodo; mantenga los vehículos pesados sobre la plataforma de grava.",
+      "source_ids": [
+        "src_1"
+      ]
+    },
+    {
+      "hazard": "wildlife",
+      "level": "high",
+      "text": "Un compañero reportó hoy un caimán junto a la alcantarilla cerca del poste 14. Manténgase lejos del agua estancada.",
+      "source_ids": [
+        "src_3"
+      ]
+    }
+  ],
+  "missing_data": [],
+  "sources": [
+    {
+      "id": "src_1",
+      "source": "open-meteo",
+      "observed_at": "2026-10-17T21:00:00Z",
+      "description": "Pronóstico por hora para el 18 de oct."
+    },
+    {
+      "id": "src_2",
+      "source": "nws",
+      "observed_at": "2026-10-17T21:30:00Z",
+      "description": "Pronóstico del NWS para la zona del sitio"
+    },
+    {
+      "id": "src_3",
+      "source": "crew-report",
+      "observed_at": "2026-10-17T15:44:02Z",
+      "description": "Reporte rpt_91c2"
+    }
+  ],
+  "disclaimer": "Solo apoyo para decisiones. Siga los procedimientos de seguridad de su empresa y las indicaciones de su supervisor.",
+  "validated": true
+}

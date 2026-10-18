@@ -5,7 +5,8 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { AlertTriangle, Camera, Clock, FileText, LogIn, LogOut, Map, Users, Wifi, WifiOff, Zap } from 'lucide-react'
+import { AlertTriangle, Camera, Clock, FileText, LogIn, LogOut, Map, Sun, Users, Wifi, WifiOff, Zap } from 'lucide-react'
+import { useSunlight } from '../lib/sunlight'
 import { useAssignment } from '../lib/assignment'
 import { cn } from '../lib/utils'
 import { describeAge, isStale, useFreshness } from '../lib/freshness'
@@ -30,17 +31,35 @@ export default function CrewShell({ children, access }: { children: ReactNode; a
     <div className="flex h-dvh flex-col bg-background text-foreground">
       <Header access={access} />
       <FreshnessStrip access={access} />
-      <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto">{children}</main>
-      <TabBar />
+      {/* Phone: tabs along the bottom. Tablet and up: menu down the left, content fills the rest. */}
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        <main ref={mainRef} className="min-h-0 min-w-0 flex-1 overflow-y-auto">{children}</main>
+        <TabBar />
+      </div>
     </div>
   )
 }
 
 function Header({ access }: { access: Access }) {
+  const [sun, toggleSun] = useSunlight()
+  const sunButton = (
+    <button
+      type="button"
+      data-testid="sunlight-toggle"
+      aria-pressed={sun}
+      aria-label="Sunlight mode"
+      title="Sunlight mode: high contrast for bright light"
+      onClick={toggleSun}
+      className={cn('flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-bold', sun ? 'border-white bg-white text-brand-strong' : 'border-[#306b55] text-[#cfe5da] hover:bg-[#1d684f]')}
+    >
+      <Sun className="h-5 w-5" aria-hidden />
+      <span className="hidden sm:inline">{sun ? 'Sunlight on' : 'Sunlight'}</span>
+    </button>
+  )
   return (
     <header
       data-testid="app-navigation"
-      className="flex min-h-16 items-center justify-between gap-3 bg-brand-strong px-4 pt-[env(safe-area-inset-top)] text-white"
+      className="flex min-h-16 items-center justify-between gap-3 bg-brand-strong px-4 pt-[env(safe-area-inset-top)] text-white sm:px-6 lg:px-8"
     >
       <div className="flex min-w-0 items-center gap-2.5">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[#d8f0e4] font-extrabold text-brand-strong" aria-hidden>CW</span>
@@ -51,6 +70,7 @@ function Header({ access }: { access: Access }) {
       </div>
       {access.allowed ? (
         <div className="flex min-w-0 items-center gap-3">
+          {sunButton}
           <div className="min-w-0 text-right text-sm leading-tight">
             <div data-testid="nav-user-name" className="truncate font-bold">{access.name ?? access.email}</div>
             <div data-testid="nav-user-email" className="truncate text-[#abcbbd]">{access.email}</div>
@@ -85,7 +105,7 @@ function FreshnessStrip({ access }: { access: Access }) {
   const age = describeAge(lastSyncedAt, now)
   const stale = isStale(lastSyncedAt, now)
   return (
-    <div role="status" aria-live="polite" data-testid="freshness-strip" className="border-b border-border bg-card px-4 py-2 text-sm font-bold">
+    <div role="status" aria-live="polite" data-testid="freshness-strip" className="border-b border-border bg-card px-4 py-2 text-sm font-bold sm:px-6 lg:px-8">
       {USE_MOCKS && (
         <div data-testid="demo-banner" className="mb-1 flex items-center gap-2 rounded-lg border border-[#9a6700]/30 bg-caution px-2 py-1 text-foreground">
           <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
@@ -117,22 +137,26 @@ function TabBar() {
   const { isAdmin } = useAssignment()
   const tabs = USE_MOCKS && isAdmin ? [...TABS, { to: '/team', label: 'Team', Icon: Users }] : TABS
   return (
-    <nav aria-label="Crew app" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }} className="grid border-t border-border bg-card pb-[env(safe-area-inset-bottom)]">
+    <nav
+      aria-label="Crew app"
+      style={{ ['--tabs' as string]: tabs.length }}
+      className="grid grid-cols-[repeat(var(--tabs),minmax(0,1fr))] border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:order-first md:flex md:w-60 md:shrink-0 md:flex-col md:content-start md:gap-1 md:overflow-y-auto md:border-r md:border-t-0 md:p-3"
+    >
       {tabs.map(({ to, label, Icon }) => (
         <NavLink
           key={to}
           to={to}
           className={({ isActive }) =>
             cn(
-              'relative flex min-h-16 flex-col items-center justify-center gap-1 text-sm font-bold',
-              isActive ? 'bg-primary text-primary-foreground' : 'text-foreground',
+              'relative flex min-h-16 flex-col items-center justify-center gap-1 text-sm font-bold md:min-h-12 md:flex-row md:justify-start md:gap-3 md:rounded-lg md:px-4 md:text-base',
+              isActive ? 'bg-primary text-primary-foreground' : 'text-foreground md:hover:bg-secondary',
             )
           }
         >
           <Icon className="h-6 w-6" aria-hidden />
           {label}
           {to === '/report' && queue.length > 0 && (
-            <span className="absolute right-3 top-2 min-w-6 rounded-full border border-[#9a6700] bg-caution px-1.5 text-center text-xs text-foreground">
+            <span className="absolute right-3 top-2 min-w-6 md:static md:ml-auto rounded-full border border-[#9a6700] bg-caution px-1.5 text-center text-xs text-foreground">
               {queue.length}
               <span className="sr-only"> waiting to upload</span>
             </span>

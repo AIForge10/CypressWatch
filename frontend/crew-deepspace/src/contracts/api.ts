@@ -10,6 +10,7 @@ import siteDetailMock from "./mocks/site_detail.json";
 import historyMock from "./mocks/site_history.json";
 import alertsMock from "./mocks/alerts.json";
 import briefingMock from "./mocks/briefing.json";
+import briefingEsMock from "./mocks/briefing_es.json";
 import reportsMock from "./mocks/reports.json";
 import reportCreatedMock from "./mocks/report_created.json";
 import ackMock from "./mocks/ack_response.json";
@@ -45,7 +46,8 @@ export const api = {
   alerts: () => USE_MOCKS ? mock<T.AlertsResponse>(alertsMock) : call<T.AlertsResponse>("/api/alerts?status=active"),
   acknowledge: (alertId: string) => USE_MOCKS ? mock<T.AckResponse>(ackMock) : call<T.AckResponse>(`/api/alerts/${alertId}/acknowledge`, { method: "POST" }),
   override: (alertId: string, body: T.OverrideRequest) => USE_MOCKS ? mock<T.OverrideResponse>(overrideMock) : call<T.OverrideResponse>(`/api/alerts/${alertId}/override`, { method: "POST", body: JSON.stringify(body) }),
-  briefing: (id: string, date: string) => USE_MOCKS ? mock<T.Briefing>(briefingMock) : call<T.Briefing>(`/api/sites/${id}/briefing?date=${date}`),
+  // `lang` is the backend's language switch: ?lang=es returns the same shape written in Spanish.
+  briefing: (id: string, date: string, lang: "en" | "es" = "en") => USE_MOCKS ? mock<T.Briefing>((lang === "es" ? briefingEsMock : briefingMock) as T.Briefing) : call<T.Briefing>(`/api/sites/${id}/briefing?date=${date}&lang=${lang}`),
   reports: (id: string) => USE_MOCKS ? mock<T.ReportsResponse>(reportsMock) : call<T.ReportsResponse>(`/api/sites/${id}/reports`),
   createReport: (data: T.ReportRequest, photo: Blob) => {
     if (USE_MOCKS) return mock<T.Report>(reportCreatedMock);
