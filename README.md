@@ -147,6 +147,8 @@ Flash: median 3.5 s. Argon: median 7.0 s, with more natural wording ("frequent p
 area", "1.9 inches"). The briefing runs once per site in the background at 6 PM, so we use Argon there
 for quality, and Flash for the high-volume explanations and for photo triage, where speed matters.
 
+**Solana devnet wallet:** `7J888M9EHynGgFTiWc9iSCbb5Nc89r1gGGMskhJv4bYp` · [all transactions](https://explorer.solana.com/address/<your address>?cluster=devnet)
+
 ## License
 
 See [LICENSE](LICENSE).
