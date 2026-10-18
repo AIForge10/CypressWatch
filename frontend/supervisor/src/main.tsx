@@ -26,12 +26,18 @@ const floridaMapStyle: StyleSpecification = {
 };
 
 const SiteBeaconScene = lazy(() => import('./SiteBeaconScene').then(({ SiteBeaconScene }) => ({ default: SiteBeaconScene })));
+const HazardStatusOrb = lazy(() => import('./HazardStatusOrb').then(({ HazardStatusOrb }) => ({ default: HazardStatusOrb })));
 
 function AppShell() {
   const { user, logout } = useAuth();
   const [navOpen, setNavOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => localStorage.getItem('cypresswatch-theme') === 'dark' ? 'dark' : 'light');
   const initials = user?.name.split(' ').map((part) => part[0]).join('').slice(0, 2);
   const roleLabel = user?.role === 'supervisor' ? 'Supervisor' : user?.role === 'crew' ? 'Crew member' : user?.role === 'owner' ? 'Project owner' : 'Unassigned role';
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('cypresswatch-theme', theme);
+  }, [theme]);
   return <div className="cw-app"><div className="cw-shell">
     <button className={`cw-menu-toggle${navOpen ? ' cw-menu-toggle-hidden' : ''}`} type="button" aria-label="Show navigation" aria-expanded={navOpen} onMouseEnter={() => setNavOpen(true)} onFocus={() => setNavOpen(true)}><span aria-hidden="true">☰</span></button>
     <aside className={`cw-sidebar${navOpen ? ' cw-sidebar-open' : ''}`} onMouseEnter={() => setNavOpen(true)} onMouseLeave={() => setNavOpen(false)} onFocus={() => setNavOpen(true)}>
@@ -45,7 +51,7 @@ function AppShell() {
       </nav>
       <div className="cw-sidebar-footer">Decisions are backed by measured data, forecasts, and a verifiable safety record.</div>
     </aside>
-    <main className="cw-main"><header className="cw-topbar"><div className="cw-connection"><span className="cw-connection-dot" aria-hidden="true" /> Connected <span>·</span> Last sync just now</div><div className="cw-user-menu"><span>{user?.email}</span><span className="cw-user-avatar" aria-hidden="true">{initials}</span><Button variant="quiet" onClick={logout}>Log out</Button></div></header><div className="cw-content"><Outlet /></div></main>
+    <main className="cw-main"><header className="cw-topbar"><div className="cw-connection"><span className="cw-connection-dot" aria-hidden="true" /> Connected <span>·</span> Last sync just now</div><div className="cw-user-menu"><button className="cw-theme-toggle" type="button" aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`} aria-pressed={theme === 'dark'} onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}><span aria-hidden="true">{theme === 'light' ? '☾' : '☀'}</span></button><span>{user?.email}</span><span className="cw-user-avatar" aria-hidden="true">{initials}</span><Button variant="quiet" onClick={logout}>Log out</Button></div></header><div className="cw-content"><Outlet /></div></main>
   </div></div>;
 }
 
@@ -57,6 +63,7 @@ function StopWorkBanner({ site, onSimulateStrike, onAcknowledge, acknowledgePend
 function Metric({ label, value, note }: { label: string; value: string | number; note: string }) { return <Card className="cw-metric"><p className="cw-metric-label">{label}</p><p className="cw-metric-value">{value}</p><p className="cw-metric-note">{note}</p></Card>; }
 
 const hazardIcons: Record<Site['primaryHazards'][number], string> = { Lightning: '⚡', Heat: '☀', Flooding: '◉', Wildfire: '♨', 'Soil saturation': '◒' };
+const landscapeLabels: Record<Site['landscape'], string> = { woodland: 'woodland', river: 'riverside', wetland: 'wetland', scrub: 'dry scrub' };
 
 function SiteRow({ site }: { site: Site }) { return <Link className="cw-site-row" to={`/app/supervisor/sites/${site.id}`}><div><p className="cw-site-name">{site.name}</p><p className="cw-site-meta">{site.location} · Updated {site.lastUpdated}</p>{site.primaryHazards.length ? <div className="cw-site-hazards" aria-label="Active hazards">{site.primaryHazards.map((hazard) => <span className="cw-site-hazard" key={hazard}><span className="cw-site-hazard-icon" aria-hidden="true">{hazardIcons[hazard]}</span>{hazard}</span>)}</div> : <p className="cw-site-meta">No active hazards</p>}</div><div className="cw-site-score"><span className="cw-score">{site.riskScore.toFixed(1)}</span><Badge tone={riskTone(site.riskLevel)}>{site.riskLevel}</Badge></div></Link>; }
 
@@ -76,28 +83,22 @@ function SiteMap({ filteredSites }: { filteredSites: Site[] }) {
   </div>;
 }
 
-// Live feed: /api/sites/summary polled every 20 s and nudged by /api/ws events.
-// While the backend is unreachable the bundled demo data renders and a banner says so.
-function useLiveSites() {
-  const [sitesLive, setSitesLive] = useState<Site[] | null>(null);
-  const [liveError, setLiveError] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    const poll = async () => {
-      try {
-        const data = await live.summary();
-        if (!cancelled) { setSitesLive(data.sites.map(summaryToSite)); setLiveError(null); }
-      } catch (error) {
-        if (!cancelled) setLiveError(`Live feed unavailable — showing demo data (${error instanceof Error ? error.message : 'error'}).`);
-      }
-    };
-    let timer = 0;
-    const loop = () => { void poll(); timer = window.setTimeout(loop, 20000); };
-    loop();
-    const ws = live.openEvents(() => { void poll(); });
-    return () => { cancelled = true; window.clearTimeout(timer); ws.close(); };
-  }, []);
-  return { sitesLive, liveError };
+function SiteLocationContext({ site }: { site: Site }) {
+  return <Card className="cw-location-context">
+    <div className="cw-location-context-heading">
+      <div><p className="cw-eyebrow">Mapped surroundings</p><h2>Near this site pin</h2><p>Roads, waterways, and neighboring land shown at the site’s mapped coordinates.</p></div>
+      <span className="cw-location-coordinates">{site.latitude.toFixed(3)}°, {site.longitude.toFixed(3)}°</span>
+    </div>
+    <div className="cw-location-map" aria-label={`Street map near the demo pin for ${site.name}`}>
+      <Map key={site.id} initialViewState={{ latitude: site.latitude, longitude: site.longitude, zoom: 12 }} mapStyle={floridaMapStyle} reuseMaps>
+        <NavigationControl position="top-right" showCompass={false} />
+        <Marker longitude={site.longitude} latitude={site.latitude} anchor="bottom">
+          <span className="cw-location-pin" aria-label={`${site.name} demo pin`}>●</span>
+        </Marker>
+      </Map>
+    </div>
+    <p className="cw-location-context-note">Demo pin, not a surveyed facility boundary. Basemap: OpenStreetMap contributors. The 3D plant and terrain above are illustrative and do not depict this mapped location.</p>
+  </Card>;
 }
 
 function SupervisorHome() {
@@ -109,7 +110,7 @@ function SupervisorHome() {
   const filteredSites = sites.filter((site) => (risk === 'All' || site.riskLevel === risk) && (hazard === 'All' || site.primaryHazards.includes(hazard as Site['primaryHazards'][number])) && `${site.name} ${site.location}`.toLowerCase().includes(search.toLowerCase())).sort((a, b) => b.riskScore - a.riskScore);
   const alertSite = sites.find((site) => site.activeAlert?.status === 'active');
   const staleCount = sites.filter((site) => site.dataFreshness !== 'Fresh').length;
-  return <div><PageHeader eyebrow="Supervisor workspace" title="Site operations overview" description={liveError ?? 'What needs attention right now across your assigned sites. Live scores refresh every 15 minutes by the workers.'} /><div>{alertSite && <StopWorkBanner site={alertSite} />}</div><div className="cw-grid-metrics"><Metric label="Assigned sites" value={sites.length} note="All operational sites" /><Metric label="High or critical risk" value={sites.filter((site) => site.riskScore >= 7).length} note="Requires supervisor attention" /><Metric label="Active stop-work" value={sites.filter((site) => site.activeAlert?.status === 'active').length} note="Deterministic alert state" /><Metric label="Stale sources" value={staleCount} note="Review before relying on data" /></div><div className="cw-filter-bar"><input className="cw-input" aria-label="Search sites" placeholder="Search site or location" value={search} onChange={(event) => setSearch(event.target.value)} /><select className="cw-select" aria-label="Filter by risk level" value={risk} onChange={(event) => setRisk(event.target.value as typeof risk)}><option>All</option><option>Critical</option><option>High</option><option>Elevated</option><option>Guarded</option><option>Low</option></select><select className="cw-select" aria-label="Filter by hazard" value={hazard} onChange={(event) => setHazard(event.target.value)}><option>All</option><option>Lightning</option><option>Heat</option><option>Flooding</option><option>Wildfire</option><option>Soil saturation</option></select></div><div className="cw-dashboard-grid"><Card><div className="cw-section-heading"><h2>Site map</h2><span className="cw-muted">Last updated just now</span></div><SiteMap filteredSites={filteredSites} /></Card><Card><div className="cw-section-heading"><h2>Ranked sites</h2><span className="cw-muted">{filteredSites.length} shown</span></div><div className="cw-site-list">{filteredSites.length ? filteredSites.map((site) => <SiteRow key={site.id} site={site} />) : <div style={{ padding: 24 }}><p style={{ margin: 0 }}>No sites match these filters.</p></div>}</div></Card></div></div>;
+  return <div><PageHeader eyebrow="Supervisor workspace" title="Site operations overview" description="What needs attention right now across your assigned sites." /><div>{alertSite && <StopWorkBanner site={alertSite} />}</div><div className="cw-grid-metrics"><Metric label="Assigned sites" value={sites.length} note="All operational sites" /><Metric label="High or critical risk" value={sites.filter((site) => site.riskScore >= 7).length} note="Requires supervisor attention" /><Metric label="Active stop-work" value={sites.filter((site) => site.activeAlert?.status === 'active').length} note="Deterministic alert state" /><Metric label="Stale sources" value={staleCount} note="Review before relying on data" /></div><div className="cw-filter-bar"><input className="cw-input" aria-label="Search sites" placeholder="Search site or location" value={search} onChange={(event) => setSearch(event.target.value)} /><select className="cw-select" aria-label="Filter by risk level" value={risk} onChange={(event) => setRisk(event.target.value as typeof risk)}><option>All</option><option>Critical</option><option>High</option><option>Elevated</option><option>Guarded</option><option>Low</option></select><select className="cw-select" aria-label="Filter by hazard" value={hazard} onChange={(event) => setHazard(event.target.value)}><option>All</option><option>Lightning</option><option>Heat</option><option>Flooding</option><option>Wildfire</option><option>Soil saturation</option></select></div><div className="cw-dashboard-grid"><Card><div className="cw-section-heading"><h2>Site map</h2><span className="cw-muted">Last updated just now</span></div><SiteMap filteredSites={filteredSites} /><p className="cw-map-note">Pins use demo coordinates, not surveyed facility locations.</p></Card><Card><div className="cw-section-heading"><h2>Ranked sites</h2><span className="cw-muted">{filteredSites.length} shown</span></div><div className="cw-site-list">{filteredSites.length ? filteredSites.map((site) => <SiteRow key={site.id} site={site} />) : <div style={{ padding: 24 }}><p style={{ margin: 0 }}>No sites match these filters.</p></div>}</div></Card></div></div>;
 }
 
 const STOP_WORK_SECONDS = 30 * 60;
@@ -127,31 +128,59 @@ function SiteBeacon({ site, active, secondsLeft, strikeCount, strikeAnimationId,
   verificationMessage: string | null;
 }) {
   const countdown = `${String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:${String(secondsLeft % 60).padStart(2, '0')}`;
-  const weather = site.primaryHazards.includes('Lightning') ? 'storm' : site.primaryHazards.some((hazard) => hazard === 'Flooding' || hazard === 'Soil saturation') ? 'overcast' : 'sunny';
+  const hasLightningHazard = site.primaryHazards.includes('Lightning');
+  const weather = hasLightningHazard ? 'storm' : site.primaryHazards.some((hazard) => hazard === 'Flooding' || hazard === 'Soil saturation') ? 'overcast' : 'sunny';
   const weatherLabel = weather === 'storm' ? 'Thunderstorms nearby' : weather === 'overcast' ? 'Cloudy conditions' : 'Sunny conditions';
   return <Card className={`cw-beacon ${active ? 'cw-beacon-stop' : 'cw-beacon-clear'}`}>
     <div className="cw-beacon-header">
-      <div><p className="cw-eyebrow">Site visualization · {liveMode ? 'Live backend' : 'Demo'}</p><h2>Site Beacon</h2><p>Interactive 3D plant and 10-mile lightning safety perimeter</p></div>
+      <div><p className="cw-eyebrow">Site visualization · Demo</p><h2>Site Beacon</h2><p>Interactive 3D plant and 10-mile lightning safety perimeter · Illustrative {landscapeLabels[site.landscape]} setting</p></div>
       <span className="cw-beacon-status" role="status">{active ? '● STOP WORK' : '● ALL CLEAR'}</span>
     </div>
     <div className="cw-beacon-layout">
-      <div className="cw-beacon-scene" aria-label={`${site.name}: ${weatherLabel}; ${active ? 'stop-work' : 'all-clear'}; 10-mile perimeter; ${strikeCount} simulated lightning ${strikeCount === 1 ? 'strike' : 'strikes'}`}>
-        <Suspense fallback={<div className="cw-beacon-loading">Loading 3D site view…</div>}><SiteBeaconScene active={active} strikeCount={strikeCount} strikeAnimationId={strikeAnimationId} weather={weather} /></Suspense>
+      <div className="cw-beacon-scene" aria-label={`${site.name}: illustrative ${landscapeLabels[site.landscape]} setting; ${weatherLabel}; ${active ? 'demo stop-work' : 'demo all-clear'}; 10-mile perimeter; ${strikeCount} simulated lightning ${strikeCount === 1 ? 'strike' : 'strikes'}. Drag to rotate and scroll or pinch to zoom.`}>
+        <Suspense fallback={<div className="cw-beacon-loading">Loading 3D site view…</div>}><SiteBeaconScene active={active} strikeCount={strikeCount} strikeAnimationId={strikeAnimationId} weather={weather} landscape={site.landscape} /></Suspense>
         <div className="cw-beacon-perimeter-tag">10-mile safety perimeter</div>
         <div className="cw-beacon-weather-tag">{weatherLabel}</div>
         <div className="cw-beacon-scene-tag">{site.name} · {site.location}</div>
+        <div className="cw-beacon-controls-hint" aria-hidden="true">Drag to rotate · Scroll to zoom</div>
       </div>
       <div className="cw-beacon-readout">
         <p className="cw-beacon-readout-label">{active ? 'Time until all-clear (30 min rule)' : 'Perimeter status'}</p>
         <div className="cw-beacon-timer" aria-live="off">{active ? countdown : '00:00'}</div>
-        <div className="cw-beacon-progress" role="progressbar" aria-label="Stop-work countdown" aria-valuemin={0} aria-valuemax={STOP_WORK_SECONDS} aria-valuenow={secondsLeft}><span style={{ width: `${(secondsLeft / STOP_WORK_SECONDS) * 100}%` }} /></div>
-        <p className="cw-beacon-message" role="status">{active ? 'Work remains paused. A new strike within 10 miles resets the 30-minute timer.' : liveMode ? 'All clear. Other site hazards still need review; a new strike returns this beacon to stop-work.' : 'Demo lightning all-clear. Connect the worker stack for live alerts.'}</p>
-        <div className="cw-beacon-actions"><Button onClick={onStrike} disabled={strikePending}>{strikePending ? 'Queuing strike…' : 'Simulate lightning strike (demo)'}</Button>{active && <Button variant="quiet" onClick={onRequestAllClear}>Request early all-clear</Button>}</div>
+        <div className="cw-beacon-progress" role="progressbar" aria-label="Demo stop-work countdown" aria-valuemin={0} aria-valuemax={STOP_WORK_SECONDS} aria-valuenow={secondsLeft}><span style={{ width: `${(secondsLeft / STOP_WORK_SECONDS) * 100}%` }} /></div>
+        <p className="cw-beacon-message" role="status">{active ? 'Work remains paused. A new strike within 10 miles resets the 30-minute timer.' : hasLightningHazard ? 'Demo lightning all-clear. Other site hazards still need review; a new strike returns this beacon to stop-work.' : 'No lightning hazard is shown for this site. Review any other site hazards before authorizing work.'}</p>
+        {hasLightningHazard && <div className="cw-beacon-actions"><Button onClick={onStrike}>Simulate lightning strike</Button>{active && <Button variant="quiet" onClick={onRequestAllClear}>Request early all-clear</Button>}</div>}
         {verificationMessage && <p className="cw-step-up-feedback" role="status">{verificationMessage}</p>}
-        <p className="cw-beacon-disclaimer">{liveMode ? 'The strike queues a simulated lightning event with the API; the stop-work engine (only writer of alert state) decides whether a stop-work starts. Decisions are the authority chain.' : 'Visualization only. Strike distances and locations are illustrative, not geographic scale. Strikes and status do not authorize field work.'}</p>
+        <p className="cw-beacon-disclaimer">Visualization only. The 3D facility, terrain, and strike distances are illustrative, not geographic scale. Weather is inferred from mock hazards; strikes and status do not authorize field work.</p>
       </div>
     </div>
   </Card>;
+}
+
+function SiteDecisionSummary({ site, active, secondsLeft }: { site: Site; active: boolean; secondsLeft: number }) {
+  const leadingHazard = site.hazards[0];
+  const orbState = active ? 'stop' : site.riskLevel === 'Critical' || site.riskLevel === 'High' || site.riskLevel === 'Elevated' ? 'watch' : 'monitor';
+  const countdown = `${String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:${String(secondsLeft % 60).padStart(2, '0')}`;
+  return <section className={`cw-decision-summary${active ? ' cw-decision-summary-active' : ''}`} aria-labelledby="site-decision-title">
+    <div className="cw-decision-main">
+      <p className="cw-decision-kicker">01 / Current site status <span>Demo data</span></p>
+      <h2 id="site-decision-title">{active ? 'Stop exposed work' : 'No active stop-work alert shown'}</h2>
+      <p className="cw-decision-guidance">{active
+        ? 'A lightning strike is inside the demo 10-mile perimeter. Keep exposed work paused and review current conditions before any reopening decision.'
+        : site.primaryHazards.length
+          ? 'Other hazards are still reported for this site. Review their evidence and freshness before deciding whether work can proceed.'
+          : 'No hazard contributors are reported in the demo data. Confirm current site conditions and source freshness before authorizing work.'}</p>
+      <div className="cw-decision-actions"><a className="cw-button cw-button-primary" href="#hazard-evidence">Review hazard evidence</a><a className="cw-button cw-button-secondary" href="#site-context">View mapped surroundings</a></div>
+    </div>
+    <div className="cw-decision-side">
+      <Suspense fallback={<span className="cw-status-orb-placeholder" aria-hidden="true" />}><HazardStatusOrb state={orbState} hazard={active ? 'Lightning' : leadingHazard?.type} /></Suspense>
+      <dl className="cw-decision-facts">
+        <div><dt>Current signal</dt><dd>{active ? 'Lightning · inside 10 mi' : leadingHazard ? `${leadingHazard.type} · ${leadingHazard.value}` : 'No hazards reported'}</dd></div>
+        <div><dt>{active ? 'Demo countdown' : 'Risk score'}</dt><dd>{active ? countdown : `${site.riskScore.toFixed(1)} / 10`}</dd></div>
+        <div><dt>Source freshness</dt><dd>{site.dataFreshness}{site.dataFreshness !== 'Fresh' ? ' · verify before use' : ''}</dd></div>
+      </dl>
+    </div>
+  </section>;
 }
 
 function SiteDetail() {
@@ -232,7 +261,6 @@ function SiteDetail() {
   if (!site) return <Placeholder title="Site not found" description="This site is not available in the current assignment." />;
   const secondsLeft = stopWorkUntil === null ? 0 : Math.max(0, Math.ceil((stopWorkUntil - now) / 1000));
   const active = secondsLeft > 0;
-  const bannerSite: Site = active ? { ...site, activeAlert: { reason: site.activeAlert?.reason ?? 'Lightning within 10 miles', startedAt: site.activeAlert?.startedAt ?? 'now', allClearAt: site.activeAlert?.allClearAt ?? new Date(stopWorkUntil!).toISOString(), status: 'active', lastStrikeAt: site.activeAlert?.lastStrikeAt ?? 'now', acknowledged: site.activeAlert?.acknowledged } } : { ...site, activeAlert: undefined };
   const siteDetail = detail ?? { forecast: [], briefing: null, reports: [] };
   const simulateStrike = () => {
     setStrikeCount((previous) => previous + 1);
@@ -272,8 +300,9 @@ function SiteDetail() {
   };
   return <div>
     <PageHeader eyebrow="Site risk detail" title={site.name} description={`${site.location} · Last updated ${site.lastUpdated}`} actions={<Link to="/app/supervisor" className="cw-button cw-button-secondary">Back to overview</Link>} />
-    {(active || liveError) && <StopWorkBanner site={bannerSite} onSimulateStrike={liveMode ? simulateStrike : undefined} onAcknowledge={liveMode ? acknowledge : undefined} acknowledgePending={ackPending} demo={Boolean(liveError)} />}
-    <SiteBeacon site={site} active={active} secondsLeft={secondsLeft} strikeCount={strikeCount} strikeAnimationId={strikeAnimationId} liveMode={liveMode} strikePending={strikePending} onStrike={simulateStrike} onRequestAllClear={() => setStepUpOpen(true)} verificationMessage={verificationMessage} />
+    <SiteDecisionSummary site={site} active={active} secondsLeft={secondsLeft} />
+    <SiteBeacon site={site} active={active} secondsLeft={secondsLeft} strikeCount={beaconAlert.strikeCount} strikeAnimationId={strikeAnimationId} onStrike={simulateStrike} onRequestAllClear={() => setStepUpOpen(true)} verificationMessage={verificationMessage} />
+    <div id="site-context"><SiteLocationContext site={site} /></div>
     {stepUpOpen && <div className="cw-step-up-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setStepUpOpen(false); }}><div className="cw-step-up-dialog" role="dialog" aria-modal="true" aria-labelledby="cw-step-up-title">
       <p className="cw-eyebrow">Supervisor approval · {liveMode ? 'Live' : 'Demo'}</p>
       <h2 id="cw-step-up-title">Early all-clear requires step-up MFA</h2>
@@ -287,8 +316,8 @@ function SiteDetail() {
         <Button variant="quiet" onClick={() => { setDemoUntil(null); setStepUpOpen(false); setVerificationMessage(liveMode ? 'Demo-only preview shown. No backend action taken.' : 'Demo-only verified outcome shown. No MFA completed and no live alert was changed.'); }}>Preview verified outcome (demo)</Button>
       </div>
     </div></div>}
-    <div className="cw-detail-grid"><div>
-      <Card className="cw-panel"><div className="cw-risk-hero"><div className="cw-risk-score-large">{site.riskScore.toFixed(1)}</div><div><Badge tone={riskTone(site.riskLevel)}>{site.riskLevel} risk</Badge><p className="cw-muted">Current hazard score out of 10</p></div></div><h2 style={{ marginTop: 26 }}>Why this score?</h2><p style={{ lineHeight: 1.6, marginBottom: 22 }}>{site.primaryHazards.length ? `${site.primaryHazards.join(' and ')} are driving the current score. Review the contributing evidence below before making an operational decision.` : 'No significant hazard contributors are currently reported.'}</p>{site.hazards.map((factor) => <div className="cw-factor" key={factor.label}><div><p className="cw-factor-label">{factor.label}</p><p className="cw-factor-meta">{factor.source} · Observed {factor.observedAt}</p></div><div className="cw-factor-value"><div>{factor.value}</div><Badge tone={riskTone(factor.severity)}>{factor.severity}</Badge></div></div>)}</Card>
+    <div id="hazard-evidence" className="cw-detail-grid"><div>
+      <Card className="cw-panel"><div className="cw-risk-hero"><div className="cw-risk-score-large">{site.riskScore.toFixed(1)}</div><div><Badge tone={riskTone(site.riskLevel)}>{site.riskLevel} risk</Badge><p className="cw-muted">Current hazard score out of 10</p></div></div><h2 style={{ marginTop: 26 }}>Why this score?</h2><p style={{ lineHeight: 1.6, marginBottom: 22 }}>{site.primaryHazards.length ? `${site.primaryHazards.join(' and ')} are driving the current score. Review the contributing evidence below before making an operational decision.` : 'No significant hazard contributors are currently reported.'}</p>{site.hazards.map((factor) => <div className="cw-factor" key={factor.type}><div><p className="cw-factor-label">{factor.label}</p><p className="cw-factor-meta">{factor.source} · Observed {factor.observedAt}</p></div><div className="cw-factor-value"><div>{factor.value}</div><Badge tone={riskTone(factor.severity)}>{factor.severity}</Badge></div></div>)}</Card>
       <Card className="cw-panel" style={{ marginTop: 20 }}><h2>Forecast drift</h2>{siteDetail.forecast.length ? <div className="cw-forecast">{siteDetail.forecast.map((point) => <div className="cw-forecast-point" key={point.time}><div className="cw-forecast-bar" style={{ height: `${Math.max(18, point.score * 10)}%` }}><span>{point.score.toFixed(1)}</span></div><strong>{point.time}</strong><small>{point.label}</small><p>{point.condition}</p></div>)}</div> : <p className="cw-muted">Forecast unavailable. This does not indicate safe conditions.</p>}</Card>
       <Card className="cw-panel" style={{ marginTop: 20 }}><h2>Latest safety briefing</h2>{siteDetail.briefing ? <><p style={{ lineHeight: 1.55 }}>{siteDetail.briefing.summary}</p><p className="cw-muted"><strong>Recommended work window:</strong> {siteDetail.briefing.recommendedWorkWindow}</p><p className="cw-muted">Generated {siteDetail.briefing.generatedAt}</p></> : <p className="cw-muted">No briefing is available for this site.</p>}</Card>
       <Card className="cw-panel" style={{ marginTop: 20 }}><h2>Recent crew reports</h2>{siteDetail.reports.length ? siteDetail.reports.map((report) => <div className="cw-factor" key={report.id}><div><p className="cw-factor-label">{report.hazardType} · {report.author}</p><p className="cw-factor-meta">{report.description} · {report.createdAt}</p></div><Badge tone={riskTone(report.severity)}>{report.status}</Badge></div>) : <p className="cw-muted">No recent crew reports.</p>}</Card>
