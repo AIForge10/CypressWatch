@@ -6,6 +6,27 @@
 
 Built for **Sperry Tech PlanIT Control** at SwampHacks XII. The full plan is in [`docs/plan.pdf`](docs/plan.pdf).
 
+## Live demo
+
+| | Link |
+|---|---|
+| **Supervisor dashboard** (Auth0 sign-in) | https://64-177-55-82.sslip.io |
+| **Crew app** (phone, Google sign-in via DeepSpace) | https://cypresswatch-crew.app.space |
+| **API docs** | https://64-177-55-82.sslip.io/docs |
+| **Solana Safety Ledger** (devnet wallet) | [7J888…4bYp transactions](https://explorer.solana.com/address/7J888M9EHynGgFTiWc9iSCbb5Nc89r1gGGMskhJv4bYp?cluster=devnet) |
+
+Running on **Vultr** (API, lightning engine, GOES-19 lightning ingest, scheduler, Tiger sync behind HTTPS) with
+**Tiger Cloud** for all data: 60 Florida plant sites, live weather and risk scores every 15 minutes, 10 years
+of history (188,448 site-days, compressed 58.6%), forecast drift and "days like today" (pgvector).
+
+What to try:
+1. **Crew app:** sign in with Google, open your site, read tomorrow's briefing in **Español**, report a
+   hazard with a photo. Gemini triages it in about 4 seconds. Accounts not on the crew list see the demo site.
+2. **Dashboard → Crew reports:** the photo arrives live; confirm it, and the decision is written to Solana.
+3. **Dashboard → Safety Ledger:** press **Verify** on any record to recompute its Merkle proof against the chain.
+4. **Dashboard → site page → Simulate lightning strike:** the stop-work engine starts a 30-minute countdown,
+   the crew app and the Site Beacon hardware react within seconds.
+
 ---
 
 ## Start here: pick your half
