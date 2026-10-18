@@ -1,4 +1,4 @@
-# FastAPI backend (M4). M1 owns app/auth, M2 owns the reports upload router.
+# FastAPI backend . Owns app/auth, owns the reports upload router.
 fastapi
 uvicorn[standard]
 pydantic-settings

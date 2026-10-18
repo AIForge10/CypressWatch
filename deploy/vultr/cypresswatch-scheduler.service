@@ -1,0 +1,18 @@
+[Unit]
+Description=CypressWatch scheduler (weather->scores->explain chain, hourly ledger anchor, 6 PM briefings)
+After=network-online.target cypresswatch-glm.service
+PartOf=cypresswatch.target
+
+[Service]
+Type=simple
+User=cypwatch
+Group=cypwatch
+WorkingDirectory=/opt/cypresswatch/backend/workers
+EnvironmentFile=/etc/cypresswatch.env
+ExecStart=/opt/cypresswatch/backend/.venv/bin/python -m cypress_workers.scheduler.scheduler
+Restart=always
+RestartSec=5
+SyslogIdentifier=cypresswatch-scheduler
+
+[Install]
+WantedBy=multi-user.target

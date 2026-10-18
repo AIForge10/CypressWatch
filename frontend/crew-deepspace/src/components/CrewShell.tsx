@@ -50,7 +50,7 @@ function Header({ access }: { access: Access }) {
       aria-label="Sunlight mode"
       title="Sunlight mode: high contrast for bright light"
       onClick={toggleSun}
-      className={cn('flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-bold', sun ? 'border-white bg-white text-brand-strong' : 'border-[#306b55] text-[#cfe5da] hover:bg-[#1d684f]')}
+      className={cn('flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-bold', sun ? 'border-white bg-white text-brand-strong' : 'border-[#5a5a55] text-[#e3eeee] hover:bg-[#4a4a45]')}
     >
       <Sun className="h-5 w-5" aria-hidden />
       <span className="hidden sm:inline">{sun ? 'Sunlight on' : 'Sunlight'}</span>
@@ -62,10 +62,10 @@ function Header({ access }: { access: Access }) {
       className="flex min-h-16 items-center justify-between gap-3 bg-brand-strong px-4 pt-[env(safe-area-inset-top)] text-white sm:px-6 lg:px-8"
     >
       <div className="flex min-w-0 items-center gap-2.5">
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[#d8f0e4] font-extrabold text-brand-strong" aria-hidden>CW</span>
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-brand-soft font-extrabold text-brand-strong" aria-hidden>CW</span>
         <div className="min-w-0 leading-tight">
           <div className="font-bold tracking-[-0.02em]">CypressWatch</div>
-          <div className="text-xs text-[#abcbbd]">Crew</div>
+          <div className="text-xs text-[#c5d9db]">Crew</div>
         </div>
       </div>
       {access.allowed ? (
@@ -73,13 +73,13 @@ function Header({ access }: { access: Access }) {
           {sunButton}
           <div className="min-w-0 text-right text-sm leading-tight">
             <div data-testid="nav-user-name" className="truncate font-bold">{access.name ?? access.email}</div>
-            <div data-testid="nav-user-email" className="truncate text-[#abcbbd]">{access.email}</div>
+            <div data-testid="nav-user-email" className="truncate text-[#c5d9db]">{access.email}</div>
           </div>
           <button
             type="button"
             aria-label="Sign out"
             onClick={() => void signOutCrew(access.userId)}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#306b55] text-[#cfe5da] hover:bg-[#1d684f]"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#5a5a55] text-[#e3eeee] hover:bg-[#4a4a45]"
           >
             <LogOut className="h-5 w-5" aria-hidden />
           </button>

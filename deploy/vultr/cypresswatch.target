@@ -1,0 +1,6 @@
+[Unit]
+Description=CypressWatch worker + API stack
+PartOf=cypresswatch.target
+
+[Install]
+WantedBy=multi-user.target

@@ -188,6 +188,9 @@ export interface Alert {
   evidence: SourceRef[];
   ledger_record_id: string | null;
   simulated: boolean;
+  // flood_risk alerts add these (stop_work_until stays null: floods warn, lightning stops work)
+  expires_at?: ISODateTime;         // auto-clear unless the triggers persist
+  data?: Record<string, unknown>;   // rule reasons + overnight_rain_in ("why is this an alert?")
 }
 
 export interface AlertsResponse {
@@ -338,6 +341,8 @@ export type LiveEventType =
   | "stop_work_extended"
   | "all_clear"
   | "alert_acknowledged"
+  | "flood_alert_started"
+  | "flood_alert_cleared"
   | "report_created"
   | "report_confirmed"
   | "score_updated"
@@ -358,6 +363,11 @@ export interface DemoStrikeRequest {
   site_id: string;
   distance_miles: number;       // must be <= 10 to trigger stop-work
   bearing_deg: number;          // direction from the site
+}
+
+export interface DemoHeavyRainRequest {
+  site_id: string;
+  overnight_in: number;         // simulated overnight rainfall total; >= 3 triggers on river sites
 }
 
 // ---------- Offline queue (crew app, IndexedDB) ----------

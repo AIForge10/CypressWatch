@@ -1,0 +1,20 @@
+{
+  "accepted": true,
+  "queued_rain": {
+    "site_id": "site_628",
+    "overnight_in": 4.5,
+    "recorded_at": "2026-10-17T22:30:00Z",
+    "simulated": true
+  },
+  "simulated": true,
+  "flood_alert_expected": true,
+  "river_sites": [
+    {
+      "site_id": "site_628",
+      "name": "Crystal River",
+      "county": "Citrus",
+      "gauge_miles": 4.6
+    }
+  ],
+  "note": "The flood rule applies it on the next flood tick (<= ~2 min, now if one ran); only river-relevant sites raise the flood_risk alert."
+}

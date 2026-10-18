@@ -85,15 +85,15 @@ export default function MapPage() {
         {online && mapBroken && <p className="px-2 pb-2 text-sm font-bold">The street map could not load. Showing a simple drawing instead.</p>}
         {!online && <p className="px-2 pb-2 text-sm font-bold">No signal. Showing a simple drawing instead of the street map.</p>}
         <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={`Map of hazard reports around ${detail.site.name}`} className="w-full rounded-lg bg-secondary">
-          <line x1={SIZE / 2} y1="0" x2={SIZE / 2} y2={SIZE} stroke="#b9c7be" strokeWidth="1" />
-          <line x1="0" y1={SIZE / 2} x2={SIZE} y2={SIZE / 2} stroke="#b9c7be" strokeWidth="1" />
-          <rect x={SIZE / 2 - 9} y={SIZE / 2 - 9} width="18" height="18" fill="#155d46" stroke="#17201c" strokeWidth="2" />
-          <text x={SIZE / 2} y={SIZE / 2 + 28} textAnchor="middle" fontSize="13" fontWeight="700" fill="#17201c">Site center</text>
+          <line x1={SIZE / 2} y1="0" x2={SIZE / 2} y2={SIZE} stroke="#9fb7bb" strokeWidth="1" />
+          <line x1="0" y1={SIZE / 2} x2={SIZE} y2={SIZE / 2} stroke="#9fb7bb" strokeWidth="1" />
+          <rect x={SIZE / 2 - 9} y={SIZE / 2 - 9} width="18" height="18" fill="#353531" stroke="#353531" strokeWidth="2" />
+          <text x={SIZE / 2} y={SIZE / 2 + 28} textAnchor="middle" fontSize="13" fontWeight="700" fill="#353531">Site center</text>
           {reports.map((r, i) => {
             const p = xy(r.lat, r.lon)
             return (
               <g key={r.report_id}>
-                <circle cx={p.x} cy={p.y} r="13" fill="#b42318" stroke="#fff" strokeWidth="2" />
+                <circle cx={p.x} cy={p.y} r="13" fill="#9f1a10" stroke="#fff" strokeWidth="2" />
                 <text x={p.x} y={p.y + 5} textAnchor="middle" fontSize="14" fontWeight="700" fill="#fff">{i + 1}</text>
               </g>
             )
@@ -102,8 +102,8 @@ export default function MapPage() {
             const p = xy(w.lat, w.lon)
             return (
               <g key={w.client_id}>
-                <circle cx={p.x} cy={p.y} r="13" fill="#fff" stroke="#b42318" strokeWidth="3" strokeDasharray="4 3" />
-                <text x={p.x} y={p.y + 5} textAnchor="middle" fontSize="14" fontWeight="700" fill="#b42318">{`W${i + 1}`}</text>
+                <circle cx={p.x} cy={p.y} r="13" fill="#fff" stroke="#9f1a10" strokeWidth="3" strokeDasharray="4 3" />
+                <text x={p.x} y={p.y + 5} textAnchor="middle" fontSize="14" fontWeight="700" fill="#9f1a10">{`W${i + 1}`}</text>
               </g>
             )
           })}

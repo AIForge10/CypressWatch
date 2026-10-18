@@ -144,7 +144,7 @@ function Countdown() {
         {activeAlert && (
           <div className="mt-4">
             {ackAt ? (
-              <p className="flex items-center gap-2 rounded-xl bg-white p-3 text-lg font-bold text-[#0f1b14]">
+              <p className="flex items-center gap-2 rounded-xl bg-white p-3 text-lg font-bold text-foreground">
                 <CircleCheck className="h-6 w-6 text-success" aria-hidden />
                 You confirmed at {clock(ackAt, tz)}{ackWaiting ? '. Sends when signal returns.' : ''}
               </p>
@@ -165,14 +165,14 @@ function Countdown() {
 
   if (everStopped && stopWorkUntil) {
     return (
-      <section data-testid="countdown" className="rounded-xl border-4 border-[#14502f] bg-success p-5 text-white">
+      <section data-testid="countdown" className="rounded-xl border-4 border-[#1c463d] bg-success p-5 text-white">
         <div className="flex items-center gap-2 text-2xl font-bold">
           <CircleCheck className="h-8 w-8" aria-hidden /> Countdown finished
         </div>
         <p className="mt-2 text-lg">
           Last strike {ago(detail.site.stop_work.last_strike_at ?? stopWorkUntil, now)}. The 30 minutes ended at {clock(stopWorkUntil, tz)} {tzAbbrev(tz)}.
         </p>
-        <p className="mt-2 flex items-start gap-2 rounded-lg bg-white px-2 py-1.5 text-base font-bold text-[#0f1b14]">
+        <p className="mt-2 flex items-start gap-2 rounded-lg bg-white px-2 py-1.5 text-base font-bold text-foreground">
           <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
           {online ? 'Wait for your supervisor to say work can restart.' : 'No signal, so new strikes cannot be seen. Check with your supervisor before restarting work.'}
         </p>
@@ -181,7 +181,7 @@ function Countdown() {
   }
 
   return (
-    <section data-testid="countdown" className="rounded-xl border-4 border-[#14502f] bg-success p-5 text-white">
+    <section data-testid="countdown" className="rounded-xl border-4 border-[#1c463d] bg-success p-5 text-white">
       <div className="flex items-center gap-2 text-2xl font-bold">
         <CircleCheck className="h-8 w-8" aria-hidden /> No stop-work right now
       </div>

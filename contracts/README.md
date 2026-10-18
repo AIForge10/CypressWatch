@@ -36,6 +36,16 @@ Frontend builds against the files in `mocks/` now; backend returns exactly these
 - Each new strike within 10 miles moves `stop_work_until` forward (the countdown restarts).
 - **Clients compute the countdown locally** from `stop_work_until`, so it keeps running offline. Use `server_time` from any response to correct the device clock.
 
+### Flood rule (Sperry requirement)
+
+River sites get a `flood_risk` alert (severity `warning`; `stop_work_until` stays `null` — floods warn, lightning stops work) when any of these fire:
+
+- **Heavy-rain night:** overnight rainfall ≥ 3.0 in on a river-relevant site (river-site flag, non-X FEMA zone, or within 15 mi of a USGS gauge).
+- **NWS:** an active NWS flood alert lists the site's county.
+- **Gauge rise:** a nearby USGS gauge rose ≥ 2.0 ft in its 3 h ingest window.
+
+The alert clears ~6 h after the last trigger, or earlier by supervisor override. `Alert.data.reasons` has the plain-language "why", and `Alert.expires_at` is when it would auto-clear.
+
 ## Endpoints
 
 All require `Authorization: Bearer <Auth0 access token>` except `/api/health`.
@@ -57,6 +67,7 @@ All require `Authorization: Bearer <Auth0 access token>` except `/api/health`.
 | GET | `/api/ledger/verify/{record_id}` | `ledger_verify.json` (match) / `ledger_verify_tampered.json` | M1 (Verify page) |
 | GET | `/api/model` | `model_card.json` | M1 (AI/ML spotlight) |
 | POST | `/api/demo/strike` | `demo_strike_request.json` → `live_events.json` first event. **Demo only, flagged simulated** | M1 (demo button) |
+| POST | `/api/demo/flood-rain` | `demo_heavy_rain.json` → the flood rule raises a `flood_risk` alert on river sites within one flood tick (~<2 min). **Demo only, flagged simulated** | M1 (demo button) |
 
 ## Live events (DeepSpace real-time sync)
 
@@ -66,7 +77,7 @@ Pushed to every subscribed device; see `live_events.json`. Every event has the s
 { "event_id": "evt_…", "type": "…", "site_id": "site_012", "occurred_at": "…", "data": { … } }
 ```
 
-Types: `stop_work_started`, `stop_work_extended`, `all_clear`, `alert_acknowledged`, `report_created`, `report_confirmed`, `score_updated`, `briefing_ready`.
+Types: `stop_work_started`, `stop_work_extended`, `all_clear`, `alert_acknowledged`, `flood_alert_started`, `flood_alert_cleared`, `report_created`, `report_confirmed`, `score_updated`, `briefing_ready`. The flood pair carries `{alert_id, reasons, evidence_sources}` and `{alert_id, reason}` in `data`.
 
 ## Offline queue (crew app)
 

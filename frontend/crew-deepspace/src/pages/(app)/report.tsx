@@ -33,11 +33,11 @@ function PinPad({ site, pin, onPick }: { site: Spot; pin: Pin | null; onPick: (p
         onPick({ lat: Number((site.lat - ((y - 150) / 150) * HALF).toFixed(5)), lon: Number((site.lon + ((x - 150) / 150) * (HALF / k)).toFixed(5)) })
       }}
     >
-      <line x1="150" y1="0" x2="150" y2="300" stroke="#b9c7be" />
-      <line x1="0" y1="150" x2="300" y2="150" stroke="#b9c7be" />
-      <rect x="141" y="141" width="18" height="18" fill="#155d46" stroke="#17201c" strokeWidth="2" />
-      <text x="150" y="178" textAnchor="middle" fontSize="13" fontWeight="700" fill="#17201c">Site center</text>
-      {at && <circle cx={at.x} cy={at.y} r="12" fill="#b42318" stroke="#fff" strokeWidth="3" />}
+      <line x1="150" y1="0" x2="150" y2="300" stroke="#9fb7bb" />
+      <line x1="0" y1="150" x2="300" y2="150" stroke="#9fb7bb" />
+      <rect x="141" y="141" width="18" height="18" fill="#353531" stroke="#353531" strokeWidth="2" />
+      <text x="150" y="178" textAnchor="middle" fontSize="13" fontWeight="700" fill="#353531">Site center</text>
+      {at && <circle cx={at.x} cy={at.y} r="12" fill="#9f1a10" stroke="#fff" strokeWidth="3" />}
     </svg>
   )
 }
