@@ -12,6 +12,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
         "http://localhost:5174",
         "http://127.0.0.1:5174",
+        "https://cypresswatch-crew.app.space",  # DeepSpace crew app
     ]
 
     # Auth0 API resource-server settings. The API fails closed when these are
@@ -26,6 +27,14 @@ class Settings(BaseSettings):
     auth0_site_ids_claim: str = "https://cypresswatch.app/site_ids"
     auth0_mfa_at_claim: str = "https://cypresswatch.app/mfa_at"
     auth0_mfa_max_age_seconds: int = 300
+
+    # DeepSpace crew sign-in. DeepSpace signs every app's users with one platform key, so a valid token
+    # only proves who signed in; crew access comes solely from CREW_ASSIGNMENTS (email -> site ids).
+    deepspace_issuer: str = "https://auth.deep.space/api/auth"
+    deepspace_jwks_url: str = "https://auth.deep.space/api/auth/jwks"
+    deepspace_public_key: str | None = None      # optional PEM; skips fetching the JWKS URL
+    deepspace_authorized_parties: str = ""       # optional comma list; when set, azp or aud must match one
+    crew_assignments: str = ""                   # "a@x.com:site_621|site_56407,b@y.com:site_617"
 
 
 settings = Settings()

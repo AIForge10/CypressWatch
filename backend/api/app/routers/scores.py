@@ -5,12 +5,15 @@ GET /api/me                           -> Me: who the Auth0 access token belongs 
 GET /api/model                       -> ModelCard (written by backend/ml/src/cypress_ml/train.py)
 GET /api/scores?day_offset=0          -> latest score for every site (today=0, tomorrow=1), ranked
 GET /api/sites/{site_id}/insights     -> forecast drift + days like today + storm approach in one call
+GET /api/tiger                        -> live Tiger Data proof panel
+
+Everything except /api/health needs an Auth0 access token; per-site data is filtered to the token's site_ids.
 """
 import json
 
 from fastapi import APIRouter, Depends, Query
 
-from app.auth import AuthenticatedUser, get_current_user
+from app.auth import AuthenticatedUser, get_current_user, require_site_access
 from app.routers.common import MODEL_CARD, api_error, now_iso
 from cypress_db import db, history, storm
 
@@ -37,15 +40,15 @@ def me(user: AuthenticatedUser = Depends(get_current_user)):
 
 
 @router.get("/model")
-def model_card():
+def model_card(user: AuthenticatedUser = Depends(get_current_user)):
     if not MODEL_CARD.exists():
         return api_error(503, "source_unavailable", "Model card not found. Run backend/ml/src/cypress_ml/train.py")
     return json.loads(MODEL_CARD.read_text())
 
 
 @router.get("/scores")
-def scores(day_offset: int = Query(0, ge=0, le=1)):
-    rows = db.ranked_sites(day_offset=day_offset)
+def scores(day_offset: int = Query(0, ge=0, le=1), user: AuthenticatedUser = Depends(get_current_user)):
+    rows = [r for r in db.ranked_sites(day_offset=day_offset) if user.can_access_site(r["site_id"])]
     return {"server_time": now_iso(), "day_offset": day_offset,
             "scores": [{k: r.get(k) for k in ("site_id", "name", "rank", "hazard_score", "risk_level", "top_hazard",
                                               "top_factors", "explanation", "model_version", "scored_at", "date")}
@@ -53,7 +56,8 @@ def scores(day_offset: int = Query(0, ge=0, le=1)):
 
 
 @router.get("/sites/{site_id}/insights")
-def insights(site_id: str):
+def insights(site_id: str, user: AuthenticatedUser = Depends(get_current_user)):
+    require_site_access(user, site_id)
     if not db._site(site_id):
         return api_error(404, "not_found", f"Unknown site {site_id}")
     try:
@@ -98,7 +102,7 @@ TIGER_SQL = {
 
 
 @router.get("/tiger")
-def tiger_stats():
+def tiger_stats(user: AuthenticatedUser = Depends(get_current_user)):
     out = {"server_time": now_iso(), "database": "Tiger Data (TimescaleDB + pgvector)"}
     for key, sql in TIGER_SQL.items():
         try:  # separate connection per query: one failure never breaks the panel

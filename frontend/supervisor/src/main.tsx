@@ -5,7 +5,7 @@ import Map, { Marker, NavigationControl, Popup } from 'react-map-gl/maplibre';
 import type { StyleSpecification } from 'maplibre-gl';
 import { Badge, Button, Card, PageHeader } from '@cypresswatch/ui';
 import { AccessDenied, AuthProvider, RequireAuth, RequireRole, useAuth } from './auth';
-import { isRiskLevel, live, summaryToSite, type CrewReport, type HazardKey, type ReportStatus, type Severity } from './live';
+import { isRiskLevel, live, summaryToSite, type Briefing, type CrewReport, type HazardKey, type Lang, type ReportStatus, type Severity, type SiteScore } from './live';
 import { riskTone, siteDetailData, sites as demoSites, type RiskLevel, type Site } from './data';
 import './app.css';
 import '@cypresswatch/ui/tokens.css';
@@ -116,7 +116,7 @@ function useLiveSites() {
     const refresh = async () => {
       try {
         const response = await live.summary(getAccessToken);
-        if (!Array.isArray(response.sites) || response.sites.length === 0) throw new Error('No assigned sites returned');
+        if (!Array.isArray(response.sites) || response.sites.length === 0) throw new Error('Signed in, but no sites are assigned to your account. Ask an admin to set app_metadata.site_ids (or ["*"]) in Auth0, then sign in again');
         if (response.sites.some((site) => site.hazard_score === null || !isRiskLevel(site.risk_level) || !site.scored_at)) {
           throw new Error('Hazard scores are unavailable for one or more assigned sites');
         }
@@ -359,9 +359,9 @@ function SiteDetail() {
       </div>
     </div></div>}
     <div id="hazard-evidence" className="cw-detail-grid"><div>
-      <Card className="cw-panel"><div className="cw-risk-hero"><div className="cw-risk-score-large">{site.riskScore.toFixed(1)}</div><div><Badge tone={riskTone(site.riskLevel)}>{site.riskLevel} risk</Badge><p className="cw-muted">Current hazard score out of 10</p></div></div><h2 style={{ marginTop: 26 }}>Why this score?</h2><p style={{ lineHeight: 1.6, marginBottom: 22 }}>These are the leading contributors to the hazard score. Review their source and timestamp before making an operational decision.</p>{site.hazards.map((factor, index) => <div className="cw-factor" key={`${factor.label}-${index}`}><div><p className="cw-factor-label">{factor.label}</p><p className="cw-factor-meta">{factor.source} · Observed {factor.observedAt}</p></div><div className="cw-factor-value"><div>{factor.value}</div><Badge tone={riskTone(factor.severity)}>{factor.severity}</Badge></div></div>)}</Card>
+      <Card className="cw-panel"><div className="cw-risk-hero"><div className="cw-risk-score-large">{site.riskScore.toFixed(1)}</div><div><Badge tone={riskTone(site.riskLevel)}>{site.riskLevel} risk</Badge><p className="cw-muted">Current hazard score out of 10</p></div></div><h2 style={{ marginTop: 26 }}>Why this score?</h2><ScoreExplanation siteId={site.id} liveMode={liveMode} />{site.hazards.map((factor, index) => <div className="cw-factor" key={`${factor.label}-${index}`}><div><p className="cw-factor-label">{factor.label}</p><p className="cw-factor-meta">{factor.source} · Observed {factor.observedAt}</p></div><div className="cw-factor-value"><div>{factor.value}</div><Badge tone={riskTone(factor.severity)}>{factor.severity}</Badge></div></div>)}</Card>
       <Card className="cw-panel" style={{ marginTop: 20 }}><h2>Forecast drift</h2>{siteDetail.forecast.length ? <div className="cw-forecast">{siteDetail.forecast.map((point) => <div className="cw-forecast-point" key={point.time}><div className="cw-forecast-bar" style={{ height: `${Math.max(18, point.score * 10)}%` }}><span>{point.score.toFixed(1)}</span></div><strong>{point.time}</strong><small>{point.label}</small><p>{point.condition}</p></div>)}</div> : <p className="cw-muted">Forecast unavailable. This does not indicate safe conditions.</p>}</Card>
-      <Card className="cw-panel" style={{ marginTop: 20 }}><h2>Latest safety briefing</h2>{siteDetail.briefing ? <><p style={{ lineHeight: 1.55 }}>{siteDetail.briefing.summary}</p><p className="cw-muted"><strong>Recommended work window:</strong> {siteDetail.briefing.recommendedWorkWindow}</p><p className="cw-muted">Generated {siteDetail.briefing.generatedAt}</p></> : <p className="cw-muted">No briefing is available for this site.</p>}</Card>
+      <Card className="cw-panel" style={{ marginTop: 20 }}><h2>Latest safety briefing</h2>{liveMode ? <BriefingCard siteId={site.id} compact /> : siteDetail.briefing ? <><p style={{ lineHeight: 1.55 }}>{siteDetail.briefing.summary}</p><p className="cw-muted"><strong>Recommended work window:</strong> {siteDetail.briefing.recommendedWorkWindow}</p><p className="cw-muted">Generated {siteDetail.briefing.generatedAt}</p></> : <p className="cw-muted">No briefing is available for this site.</p>}</Card>
       <Card className="cw-panel" style={{ marginTop: 20 }}><h2>Recent crew reports</h2>{siteDetail.reports.length ? siteDetail.reports.map((report) => <div className="cw-factor" key={report.id}><div><p className="cw-factor-label">{report.hazardType} · {report.author}</p><p className="cw-factor-meta">{report.description} · {report.createdAt}</p></div><Badge tone={riskTone(report.severity)}>{report.status}</Badge></div>) : <p className="cw-muted">No recent crew reports.</p>}</Card>
     </div><div>
       <Card className="cw-panel"><h2>Data freshness</h2><Badge tone={site.dataFreshness === 'Fresh' ? 'success' : 'warning'}>{site.dataFreshness}</Badge><p className="cw-muted" style={{ lineHeight: 1.5 }}>The score is fresh for one hour after calculation. Weather timestamps appear with each model factor. Missing or stale data does not indicate safe conditions.</p></Card>
@@ -369,6 +369,116 @@ function SiteDetail() {
     </div></div>
   </div>;
 }
+const FALLBACK_EXPLANATION = 'These are the leading contributors to the hazard score. Review their source and timestamp before making an operational decision.';
+
+function ScoreExplanation({ siteId, liveMode }: { siteId: string; liveMode: boolean }) {
+  const { getAccessToken, isMockAuth } = useAuth();
+  const [score, setScore] = useState<SiteScore | null>(null);
+  useEffect(() => {
+    if (!liveMode || isMockAuth) return;
+    let stopped = false;
+    void live.siteScore(siteId, getAccessToken).then((result) => { if (!stopped) setScore(result); }).catch(() => { if (!stopped) setScore(null); });
+    return () => { stopped = true; };
+  }, [getAccessToken, isMockAuth, liveMode, siteId]);
+  if (!score?.explanation) return <p style={{ lineHeight: 1.6, marginBottom: 22 }}>{FALLBACK_EXPLANATION}</p>;
+  return <div className="cw-ai-note">
+    <p className="cw-eyebrow" style={{ margin: 0 }}>AI explanation · Gemini</p>
+    <p className="cw-ai-note-text">{score.explanation}</p>
+    <p className="cw-factor-meta">Gemini only rephrases the model's score and its top factors below; a validator rejects any number or hazard that is not in them.</p>
+  </div>;
+}
+
+const HAZARD_NAMES: Record<Lang, Record<HazardKey, string>> = {
+  en: { lightning: 'Lightning', heat: 'Heat', storm: 'Wind and storms', flood: 'Flooding', soil_saturation: 'Soil saturation', wildfire: 'Wildfire', wildlife: 'Wildlife' },
+  es: { lightning: 'Rayos', heat: 'Calor', storm: 'Vientos fuertes', flood: 'Inundación', soil_saturation: 'Suelo saturado', wildfire: 'Incendio forestal', wildlife: 'Fauna silvestre' },
+};
+const LEVEL_NAMES: Record<Lang, Record<string, string>> = {
+  en: { low: 'Low', moderate: 'Moderate', high: 'High', extreme: 'Extreme' },
+  es: { low: 'Bajo', moderate: 'Moderado', high: 'Alto', extreme: 'Extremo' },
+};
+const BRIEFING_TEXT = {
+  en: { day: 'Briefing for', window: 'Best work window', noWindow: 'No clear low-risk work window tomorrow.', forecast: 'Forecast score', risk: 'risk', generated: 'Generated', checked: 'Passed grounding checks', template: 'Plain template (AI text did not pass the checks)', sources: 'Sources', missing: 'Unavailable data', none: 'No hazards at moderate level or above are forecast for tomorrow.' },
+  es: { day: 'Informe para el', window: 'Mejor horario de trabajo', noWindow: 'No hay un horario claro de bajo riesgo mañana.', forecast: 'Puntuación pronosticada', risk: 'riesgo', generated: 'Generado', checked: 'Verificado con los datos', template: 'Plantilla (el texto de IA no pasó la verificación)', sources: 'Fuentes', missing: 'Datos no disponibles', none: 'No se pronostican peligros de nivel moderado o superior para mañana.' },
+};
+const levelTone = (level: string | null | undefined) => level === 'extreme' || level === 'high' ? 'danger' : level === 'moderate' ? 'warning' : 'success';
+const readLang = (): Lang => { try { return localStorage.getItem('cypresswatch-briefing-lang') === 'es' ? 'es' : 'en'; } catch { return 'en'; } };
+
+function LanguageToggle({ lang, onChange }: { lang: Lang; onChange: (lang: Lang) => void }) {
+  return <div className="cw-lang-toggle" role="group" aria-label="Briefing language">
+    <button type="button" aria-pressed={lang === 'en'} onClick={() => onChange('en')}>English</button>
+    <button type="button" aria-pressed={lang === 'es'} onClick={() => onChange('es')}>Español</button>
+  </div>;
+}
+
+function BriefingCard({ siteId, compact = false }: { siteId: string; compact?: boolean }) {
+  const { getAccessToken, isMockAuth } = useAuth();
+  const [lang, setLang] = useState<Lang>(readLang);
+  const [briefing, setBriefing] = useState<Briefing | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const changeLang = (next: Lang) => { setLang(next); try { localStorage.setItem('cypresswatch-briefing-lang', next); } catch { /* per-viewer convenience only */ } };
+  useEffect(() => {
+    if (isMockAuth) { setError('Demo sign-in has no API access token. Sign in with Auth0 to see live briefings.'); return; }
+    let stopped = false;
+    setBriefing(null);
+    setError(null);
+    void live.briefing(siteId, lang, getAccessToken)
+      .then((result) => { if (!stopped) setBriefing(result); })
+      .catch((err: Error & { status?: number }) => { if (!stopped) setError(err.status === 404 ? 'No briefing has been generated for this site yet. Briefings are written at 6 PM site time.' : err.message); });
+    return () => { stopped = true; };
+  }, [getAccessToken, isMockAuth, lang, siteId]);
+  const t = BRIEFING_TEXT[lang];
+  const day = briefing ? new Date(`${briefing.for_date}T12:00:00Z`).toLocaleDateString(lang === 'es' ? 'es-US' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }) : '';
+  return <div className="cw-briefing" lang={lang}>
+    <div className="cw-briefing-top">
+      <p className="cw-eyebrow" style={{ margin: 0 }}>{briefing ? `${t.day} ${day}` : 'Gemini briefing'}</p>
+      <LanguageToggle lang={lang} onChange={changeLang} />
+    </div>
+    {error && <p className="cw-muted">{error}</p>}
+    {!briefing && !error && <p className="cw-muted">{lang === 'es' ? 'Cargando informe…' : 'Loading briefing…'}</p>}
+    {briefing && <>
+      <p className="cw-briefing-headline">{briefing.headline}</p>
+      <div className="cw-briefing-meta">
+        {briefing.risk_level && <Badge tone={levelTone(briefing.risk_level)}>{lang === 'es' ? `${t.risk} ${LEVEL_NAMES.es[briefing.risk_level].toLowerCase()}` : `${LEVEL_NAMES.en[briefing.risk_level]} ${t.risk}`}</Badge>}
+        {briefing.hazard_score_forecast !== null && <span className="cw-muted">{t.forecast}: <strong>{briefing.hazard_score_forecast.toFixed(1)}</strong> / 10</span>}
+        <Badge tone={briefing.validated ? 'success' : 'neutral'}>{briefing.validated ? t.checked : t.template}</Badge>
+      </div>
+      <div className="cw-briefing-window">
+        <p className="cw-factor-label" style={{ margin: 0 }}>{t.window}</p>
+        {briefing.best_work_window ? <><p className="cw-briefing-window-time">{briefing.best_work_window.start_local} – {briefing.best_work_window.end_local}</p><p className="cw-factor-meta">{briefing.best_work_window.reason}</p></> : <p className="cw-factor-meta">{t.noWindow}</p>}
+      </div>
+      {briefing.items.length ? briefing.items.map((item) => <div className="cw-factor" key={item.hazard}>
+        <div><p className="cw-factor-label">{HAZARD_NAMES[lang][item.hazard] ?? item.hazard}</p><p className="cw-briefing-item-text">{item.text}</p></div>
+        <Badge tone={levelTone(item.level)}>{LEVEL_NAMES[lang][item.level] ?? item.level}</Badge>
+      </div>) : <p className="cw-muted">{t.none}</p>}
+      {!compact && <>
+        {briefing.missing_data.length > 0 && <p className="cw-factor-meta" style={{ marginTop: 12 }}>{t.missing}: {briefing.missing_data.join(', ')}</p>}
+        <details className="cw-briefing-sources"><summary>{t.sources} ({briefing.sources.length})</summary><ul>{briefing.sources.map((src) => <li key={src.id}><code>{src.id}</code> {src.description} · {src.source}{src.observed_at ? ` · ${src.observed_at.replace('T', ' ').slice(0, 16)} UTC` : ''}</li>)}</ul></details>
+      </>}
+      <p className="cw-factor-meta" style={{ marginTop: 12 }}>{t.generated} {briefing.generated_at.replace('T', ' ').slice(0, 16)} UTC · {briefing.disclaimer}</p>
+    </>}
+  </div>;
+}
+
+function BriefingsPage() {
+  const { sitesLive, liveError } = useLiveSites();
+  const [siteId, setSiteId] = useState<string | null>(null);
+  const sites = sitesLive ?? [];
+  const selected = siteId ?? sites[0]?.id ?? null;
+  return <div>
+    <PageHeader eyebrow="Gemini briefings" title="Next-day safety briefings" description="Written every evening at 6 PM site time in English and Spanish. Code computes every fact from the forecast and the hazard model; Gemini only writes them up, and a validator checks levels, numbers, sources and language before crews see it." />
+    {!sitesLive && <Card><p style={{ margin: 0 }} className="cw-muted">{liveError ?? 'Loading your sites…'}</p></Card>}
+    {sitesLive && <>
+      <div className="cw-filter-bar">
+        <select className="cw-select" aria-label="Choose a site" value={selected ?? ''} onChange={(event) => setSiteId(event.target.value)}>
+          {[...sites].sort((a, b) => b.riskScore - a.riskScore).map((site) => <option key={site.id} value={site.id}>{site.name} · {site.riskScore.toFixed(1)} {site.riskLevel}</option>)}
+        </select>
+        {selected && <Link className="cw-button cw-button-secondary" to={`/app/supervisor/sites/${selected}`}>Open site</Link>}
+      </div>
+      {selected && <Card className="cw-panel"><BriefingCard key={selected} siteId={selected} /></Card>}
+    </>}
+  </div>;
+}
+
 function Placeholder({ title, description }: { title: string; description: string }) { return <><PageHeader eyebrow="Placeholder destination" title={title} description={description} /><Card><div style={{ padding: 24 }}><p style={{ margin: 0, color: 'var(--cw-muted)' }}>This route is available for navigation and will be built in a later slice.</p></div></Card></>; }
 
 function CrewAppHandoff() { return <><PageHeader eyebrow="Crew workspace" title="Open the crew app" description="The crew experience runs in a separate DeepSpace app." /><Card><div style={{ padding: 24 }}><p>Use the crew app for your site status, briefings, and hazard reports. It has its own sign-in; your Auth0 session here will not sign you in there.</p><a className="cw-button cw-button-primary" href={crewAppUrl}>Open crew app</a></div></Card></>; }
@@ -525,7 +635,7 @@ createRoot(document.getElementById('root')!).render(<StrictMode><BrowserRouter><
   <Route path="/" element={<AuthCallback />} />
   <Route path="/login" element={<Login />} />
   <Route element={<RequireAuth />}><Route path="/app" element={<AppShell />}><Route index element={<RoleHomeRedirect />} />
-    <Route element={<RequireRole role="supervisor" />}><Route path="supervisor" element={<SupervisorHome />} /><Route path="supervisor/sites" element={<SupervisorHome />} /><Route path="supervisor/sites/:siteId" element={<SiteDetail />} /><Route path="supervisor/reports" element={<ReportsPage />} /><Route path="supervisor/briefings" element={<Placeholder title="Briefings" description="Prepare and review the latest safety briefings." />} /><Route path="supervisor/verify" element={<VerifyPage />} /></Route>
+    <Route element={<RequireRole role="supervisor" />}><Route path="supervisor" element={<SupervisorHome />} /><Route path="supervisor/sites" element={<SupervisorHome />} /><Route path="supervisor/sites/:siteId" element={<SiteDetail />} /><Route path="supervisor/reports" element={<ReportsPage />} /><Route path="supervisor/briefings" element={<BriefingsPage />} /><Route path="supervisor/verify" element={<VerifyPage />} /></Route>
     <Route element={<RequireRole role="crew" />}><Route path="crew" element={<CrewAppHandoff />} /><Route path="crew/site" element={<Navigate to="/app/crew" replace />} /><Route path="crew/report" element={<Navigate to="/app/crew" replace />} /></Route>
     <Route element={<RequireRole role="owner" />}><Route path="owner" element={<Placeholder title="Sites" description="Read-only site visibility for project owners." />} /><Route path="owner/sites/:siteId/history" element={<Placeholder title="Safety history" description="Read-only history for a selected site." />} /><Route path="owner/verify" element={<Placeholder title="Verify records" description="Read-only verification records." />} /></Route>
   </Route></Route>

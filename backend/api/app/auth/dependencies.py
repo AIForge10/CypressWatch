@@ -6,6 +6,8 @@ and step-up MFA state from a validated access token.
 """
 from __future__ import annotations
 
+import json
+import urllib.request
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -13,6 +15,7 @@ from time import time
 from typing import Any
 
 import jwt
+from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import InvalidTokenError, PyJWKClient, PyJWKClientError
@@ -135,8 +138,71 @@ def _user_from_claims(claims: dict[str, Any]) -> AuthenticatedUser:
     )
 
 
+# ---------- DeepSpace crew tokens ----------
+# The crew app signs in with DeepSpace (ES256, one platform-wide key and issuer for every DeepSpace app).
+# A verified token proves the email; the role is always "crew" and sites come only from CREW_ASSIGNMENTS.
+
+def crew_assignments() -> dict[str, frozenset[str]]:
+    """CREW_ASSIGNMENTS "a@x.com:site_621|site_56407,b@y.com:*" -> {email: site ids}."""
+    out: dict[str, frozenset[str]] = {}
+    for entry in settings.crew_assignments.split(","):
+        email, _, sites = entry.strip().partition(":")
+        if email and sites:
+            out[email.strip().lower()] = frozenset(s.strip() for s in sites.split("|") if s.strip())
+    return out
+
+
+@lru_cache(maxsize=4)
+def _deepspace_key(source: str):
+    """PEM public key from DEEPSPACE_PUBLIC_KEY, or fetched once from the DeepSpace JWKS URL ({"publicKey": PEM})."""
+    pem = settings.deepspace_public_key
+    if not pem:
+        req = urllib.request.Request(source, headers={"User-Agent": "CypressWatch-API/1.0", "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=10) as res:  # noqa: S310 - fixed https URL from settings
+            pem = json.loads(res.read())["publicKey"]
+    return load_pem_public_key(pem.replace("\\n", "\n").encode())
+
+
+def _authenticate_deepspace(token: str) -> AuthenticatedUser:
+    try:
+        key = _deepspace_key(settings.deepspace_jwks_url)
+    except (OSError, ValueError, KeyError) as error:
+        raise TokenValidationError("Crew sign-in keys are unavailable right now.", status.HTTP_503_SERVICE_UNAVAILABLE) from error
+    try:
+        claims = jwt.decode(token, key, algorithms=["ES256"], issuer=settings.deepspace_issuer,
+                            options={"require": ["exp", "sub"], "verify_aud": False})
+    except InvalidTokenError as error:
+        raise TokenValidationError("Invalid or expired crew sign-in token.") from error
+    parties = {p.strip() for p in settings.deepspace_authorized_parties.split(",") if p.strip()}
+    if parties:
+        aud = claims.get("aud")
+        presented = {claims.get("azp"), *(aud if isinstance(aud, list) else [aud])} - {None}
+        if not presented & parties:
+            raise TokenValidationError("This sign-in token was issued for a different app.")
+    email = claims.get("email")
+    sites = crew_assignments().get(email.strip().lower()) if isinstance(email, str) else None
+    if not sites:
+        raise TokenValidationError("Signed in, but this account is not on the CypressWatch crew list. "
+                                   "Ask a supervisor to add your email.", status.HTTP_403_FORBIDDEN)
+    name = claims.get("name") or email
+    return AuthenticatedUser(user_id=f"deepspace|{claims['sub']}", name=name if isinstance(name, str) else email,
+                             email=email, role="crew", site_ids=sites, claims=claims)
+
+
+def _is_deepspace(token: str) -> bool:
+    """Route by the (unverified) header and issuer; the chosen path then verifies everything."""
+    try:
+        header = jwt.get_unverified_header(token)
+        issuer = jwt.decode(token, options={"verify_signature": False}).get("iss")
+    except InvalidTokenError:
+        return False
+    return header.get("alg") == "ES256" and issuer == settings.deepspace_issuer
+
+
 def authenticate_access_token(token: str) -> AuthenticatedUser:
-    """Verify signature, issuer, audience and registered claims before use."""
+    """Verify signature, issuer, audience and registered claims before use (Auth0, or a DeepSpace crew token)."""
+    if _is_deepspace(token):
+        return _authenticate_deepspace(token)
     audience = settings.auth0_audience
     issuer = _issuer()
     jwks_url = _jwks_url()

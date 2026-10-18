@@ -1,6 +1,6 @@
 [Unit]
 Description=CypressWatch worker + API stack
-PartOf=cypresswatch.target
+Wants=cypresswatch-api.service cypresswatch-glm.service cypresswatch-engine.service cypresswatch-scheduler.service cypresswatch-sync.service
 
 [Install]
 WantedBy=multi-user.target

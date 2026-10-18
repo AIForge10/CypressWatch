@@ -4,7 +4,7 @@ import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 export type Role = 'supervisor' | 'crew' | 'owner';
 export type Permission = 'sites:read' | 'briefings:read' | 'reports:write' | 'ledger:read';
-export type MockUser = { id: string; name: string; email: string; role: Role | null; assignedSiteIds: string[] };
+export type MockUser = { id: string; name: string; email: string; role: Role | null; assignedSiteIds: string[]; roleClaim?: unknown };
 
 const demoUsers: Record<Role, MockUser> = {
   supervisor: { id: 'demo-supervisor', name: 'Jordan Lee', email: 'supervisor@example.com', role: 'supervisor', assignedSiteIds: ['site-01', 'site-02'] },
@@ -57,7 +57,7 @@ function auth0UserToAppUser(user: Auth0User | undefined): MockUser | null {
   const role = roleFromClaim(claims[auth0RoleClaim] ?? claims.role);
   const siteIds = claims[auth0SiteIdsClaim];
   const assignedSiteIds = Array.isArray(siteIds) ? siteIds.filter((id): id is string => typeof id === 'string') : [];
-  return { id: user.sub ?? 'auth0-user', name: user.name ?? user.nickname ?? user.email ?? 'CypressWatch user', email: user.email ?? '', role, assignedSiteIds };
+  return { id: user.sub ?? 'auth0-user', name: user.name ?? user.nickname ?? user.email ?? 'CypressWatch user', email: user.email ?? '', role, assignedSiteIds, roleClaim: claims[auth0RoleClaim] ?? claims.role };
 }
 
 function permissionsFor(role: Role | null | undefined, permission: Permission) {
@@ -123,4 +123,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() { const context = useContext(AuthContext); if (!context) throw new Error('useAuth must be used inside AuthProvider'); return context; }
 export function RequireAuth() { const { isAuthenticated, isLoading } = useAuth(); const location = useLocation(); if (isLoading) return <div className="cw-auth-loading">Checking authentication…</div>; return isAuthenticated ? <Outlet /> : <Navigate to="/login" state={{ from: location }} replace />; }
 export function RequireRole({ role }: { role: Role }) { const { user, isLoading } = useAuth(); if (isLoading) return <div className="cw-auth-loading">Checking access…</div>; return user?.role === role ? <Outlet /> : <Navigate to="/app" replace />; }
-export function AccessDenied() { return <div className="cw-auth-loading"><h1>Access restricted</h1><p>Your account does not have a CypressWatch role for this workspace.</p></div>; }
+// Shown when sign-in worked but the ID token carries no usable role. Says exactly what an Auth0 admin must
+// change, and shows the user id so the admin edits the right account (Google and email/password sign-ins
+// with the same address are separate Auth0 users).
+export function AccessDenied() {
+  const { user, logout } = useAuth();
+  const [copied, setCopied] = useState(false);
+  const connection = user?.id.split('|')[0];
+  const signedInWith = connection === 'google-oauth2' ? 'Google' : connection === 'auth0' ? 'email and password' : connection;
+  const hasUnknownRole = user?.roleClaim !== undefined && user?.roleClaim !== null && user?.roleClaim !== '';
+  const fix = '{ "role": "supervisor", "site_ids": ["*"] }';
+  const copy = () => { void navigator.clipboard?.writeText(fix).then(() => setCopied(true)).catch(() => setCopied(false)); };
+  return <div className="cw-auth-loading"><div className="cw-access-denied">
+    <p className="cw-eyebrow">Signed in · no CypressWatch role</p>
+    <h1>Access restricted</h1>
+    <p>You are signed in as <strong>{user?.email || user?.name}</strong>{signedInWith ? <> with {signedInWith}</> : null}, but your account {hasUnknownRole ? <>has an unrecognized role (<code>{String(user?.roleClaim)}</code>)</> : 'has no CypressWatch role yet'}.</p>
+    <div className="cw-access-denied-steps">
+      <p><strong>Ask a CypressWatch admin to:</strong></p>
+      <ol>
+        <li>Add your email to the team allowlist, <em>or</em> open your user in Auth0 → User Management → Users.</li>
+        <li>Set <strong>app_metadata</strong> (not user_metadata) to:</li>
+      </ol>
+      <pre>{fix}</pre>
+      <p className="cw-access-denied-id">Auth0 user id: <code>{user?.id}</code></p>
+    </div>
+    <div className="cw-access-denied-actions">
+      <button className="cw-button cw-button-secondary" type="button" onClick={copy}>{copied ? 'Copied' : 'Copy app_metadata'}</button>
+      <button className="cw-button cw-button-primary" type="button" onClick={logout}>Sign out and try again</button>
+    </div>
+    <p className="cw-access-denied-note">Roles are read when you sign in, so sign out and back in after the change.</p>
+  </div></div>;
+}

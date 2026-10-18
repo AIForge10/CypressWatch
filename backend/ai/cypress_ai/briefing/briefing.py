@@ -423,6 +423,14 @@ WORK_START, WORK_END = 6, 18          # work-day hours considered for hazards an
 THUNDER_CODES = {95, 96, 99}
 LEVELS = ["low", "moderate", "high", "extreme"]
 ES_LEVEL = {"low": "bajo", "moderate": "moderado", "high": "alto", "extreme": "extremo"}
+# Spanish names for the contract hazard keys: the JSON field keeps the key, Spanish text uses these.
+ES_HAZARD = {"lightning": "rayos", "heat": "calor", "storm": "vientos fuertes", "flood": "inundación",
+             "soil_saturation": "suelo saturado", "wildfire": "incendio forestal", "wildlife": "fauna silvestre"}
+WINDOW_REASON = {
+    "en": "Heat index under 103°F, no thunderstorms, rain chance under 40% and gusts under 35 mph.",
+    "es": "Índice de calor menor a 103°F, sin tormentas eléctricas, probabilidad de lluvia menor al 40% "
+          "y ráfagas menores a 35 mph.",
+}
 DISCLAIMER = {
     "en": "Decision support only. Follow your company's safety procedures and your supervisor's direction.",
     "es": "Solo apoyo para decisiones. Siga los procedimientos de seguridad de su empresa y las indicaciones de su supervisor.",
@@ -435,18 +443,20 @@ SYSTEM = (
     "You write next-day safety briefings for utility field crews in Florida. "
     "You receive hazards, each with a level, facts in English and Spanish, and source ids, plus an overall model score. "
     "Write the same briefing in English (en) and Spanish (es). "
-    "Rules: include every hazard given exactly once, using its hazard name exactly as given and its given level; "
+    "Rules: include every hazard given exactly once, with the JSON field 'hazard' exactly as given and its given level; "
     "do not add hazards; use only numbers and times that appear in the facts; cite the given source ids; "
     "never say work is safe or risk-free; each item is one or two short sentences a crew lead can read aloud. "
     "The headline is one sentence with tomorrow's overall risk level and the best work window if one is given. "
     "If the overall level is higher than every hazard item, add a short second sentence with the top one or two reasons, "
     "rephrased naturally in lowercase (not copied as labels) "
     "(English: overall.main_reasons; Spanish: overall.main_reasons_es), so the briefing does not look contradictory. "
-    "In Spanish text, write risk levels in Spanish (bajo, moderado, alto, extremo) as given in level_es; "
-    "the JSON field 'level' always stays in English."
+    "In Spanish text, write risk levels in Spanish (bajo, moderado, alto, extremo) as given in level_es, "
+    "and name each hazard in Spanish as given in hazard_es (never the English key such as 'storm' or 'flood'); "
+    "the JSON fields 'hazard' and 'level' always stay in English."
 )
 EN_LEVEL_WORDS = re.compile(r"\b(low|moderate|high|extreme)\b", re.IGNORECASE)
-EN_WORDS = re.compile(r"\b(of|the|and|with|rain|days|hours|this week|this month)\b", re.IGNORECASE)
+EN_WORDS = re.compile(r"\b(of|the|and|with|rain|days|hours|this week|this month|storms?|flood|floods|flooding|heat|"
+                      r"lightning|wildfire|wildlife|soil|saturation|wind|gusts|thunderstorms?)\b", re.IGNORECASE)
 ODD_SPACE = re.compile(r"[\u00a0\u1680\u2000-\u200d\u2028\u2029\u202f\u205f\u2060\u3000\ufeff]")
 LETTERS = r"[A-Za-zÁÉÍÓÚáéíóúñü]+"
 MENTE_GLUE = re.compile(r"\b(\w+mente)(a|al|de|del|con|en|por|la|el|los|las|y)\b")  # "principalmentea"
@@ -560,8 +570,7 @@ def best_work_window(hours: list[dict]) -> dict | None:
             best = (run[0], run[-1] + 1)
     if not best:
         return None
-    return {"start_local": _t24(best[0]), "end_local": _t24(best[1]),
-            "reason": "Heat index under 103°F, no thunderstorms, rain chance under 40% and gusts under 35 mph."}
+    return {"start_local": _t24(best[0]), "end_local": _t24(best[1]), "reason": WINDOW_REASON["en"]}
 
 
 def build_facts(site: dict, rec: dict, score: dict | None, for_date: str) -> dict:
@@ -637,6 +646,7 @@ def build_facts(site: dict, rec: dict, score: dict | None, for_date: str) -> dic
     shown = [h for h in hazards if LEVELS.index(h["level"]) >= 1]  # only hazards at moderate or above
     for h in shown:
         h["level_es"] = ES_LEVEL[h["level"]]
+        h["hazard_es"] = ES_HAZARD[h["hazard"]]
     return {"site_id": site["site_id"], "name": site.get("name", site["site_id"]), "for_date": for_date,
             "hazards": shown, "overall": overall, "sources": sources, "missing_data": missing,
             "best_work_window": best_work_window(hours)}
@@ -740,7 +750,8 @@ def generate_briefing(site: dict, rec: dict, score: dict | None, for_date: str |
             "headline": out[lang]["headline"],
             "hazard_score_forecast": score["hazard_score"] if score else None,
             "risk_level": score["risk_level"] if score else None,
-            "best_work_window": {"date": for_date, **facts["best_work_window"]} if facts["best_work_window"] else None,
+            "best_work_window": ({"date": for_date, **facts["best_work_window"], "reason": WINDOW_REASON[lang]}
+                                 if facts["best_work_window"] else None),
             "items": out[lang]["items"], "missing_data": facts["missing_data"],
             "sources": facts["sources"], "disclaimer": DISCLAIMER[lang], "validated": validated,
         }

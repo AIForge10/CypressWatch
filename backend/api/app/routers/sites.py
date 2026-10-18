@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 
-from app.auth import AuthenticatedUser, get_current_user
+from app.auth import AuthenticatedUser, get_current_user, require_site_access
 from cypress_workers.common import LIVE, SITES_FILE, STOP_WORK_FILE, now_iso, read_json
 
 router = APIRouter(prefix="/api/sites", tags=["sites"])
@@ -151,9 +151,10 @@ def _site_summaries() -> tuple[list[dict], str | None]:
 
 
 @router.get("")
-def list_sites() -> dict:
+def list_sites(user: AuthenticatedUser = Depends(get_current_user)) -> dict:
     sites, model_version = _site_summaries()
-    return {"server_time": now_iso(), "model_version": model_version or "hazard_index_v1", "sites": sites}
+    return {"server_time": now_iso(), "model_version": model_version or "hazard_index_v1",
+            "sites": [s for s in sites if user.can_access_site(s["site_id"])]}
 
 
 def _level(value, cuts) -> str:
@@ -200,7 +201,8 @@ def _safe(fn, *args, default=None):
 
 
 @router.get("/{site_id}")
-def site_detail(site_id: str):
+def site_detail(site_id: str, user: AuthenticatedUser = Depends(get_current_user)):
+    require_site_access(user, site_id)
     sites, _ = _site_summaries()
     site = next((s for s in sites if s["site_id"] == site_id), None)
     if not site:
@@ -239,7 +241,9 @@ def site_detail(site_id: str):
 
 
 @router.get("/{site_id}/history")
-def site_history(site_id: str, hours: int = Query(48, ge=1, le=168)):
+def site_history(site_id: str, hours: int = Query(48, ge=1, le=168),
+                 user: AuthenticatedUser = Depends(get_current_user)):
+    require_site_access(user, site_id)
     if not _safe(db._site, site_id):
         return api_error(404, "not_found", f"Unknown site {site_id}")
     return db.site_history(site_id, hours)

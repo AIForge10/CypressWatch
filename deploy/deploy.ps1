@@ -38,16 +38,19 @@ New-Item -ItemType Directory $stage | Out-Null
 tar -czf "$stage\backend.tgz" -C $root `
     --exclude 'backend/.venv' --exclude 'backend/ledger/data' --exclude 'backend/ledger/.keys' `
     --exclude 'backend/workers/data/history' --exclude 'backend/workers/data/live' `
-    --exclude 'backend/api/.env' backend
+    --exclude 'backend/api/.env' --exclude 'backend/workers/.env' --exclude 'backend/ai/.env' `
+    --exclude 'backend/ml/data' --exclude 'backend/ml/notebooks' --exclude 'backend/data/reports' backend
 Write-Host "   packed $stage\backend.tgz $([Math]::Round((Get-Item $stage\backend.tgz).Length / 1MB, 1)) MB -> shipping"
 
 Write-Host "== 2. unpack + pip install ==" -ForegroundColor Cyan
 scpx "$stage\backend.tgz" /tmp/backend.tgz
 sshx "rm -rf $opt/backend_new && mkdir -p $opt/backend_new && tar -xzf /tmp/backend.tgz -C $opt/backend_new"
-sshx "rsync -a --delete $opt/backend_new/ $opt/backend/ && rm -rf $opt/backend_new /tmp/backend.tgz"
+# keep server-only state (venv, ledger db + wallet, live data, crew photos): --delete must not remove it
+$keep = "--exclude=/.venv --exclude=/ledger/data --exclude=/ledger/.keys --exclude=/workers/data/history --exclude=/workers/data/live --exclude=/data/reports"
+sshx "rsync -a --delete $keep $opt/backend_new/backend/ $opt/backend/ && rm -rf $opt/backend_new /tmp/backend.tgz"
 sshx "chown -R cypwatch:cypwatch $opt"
 sshx "$opt/backend/.venv/bin/pip install --upgrade pip -q"
-sshx "$opt/backend/.venv/bin/pip install -q -r $opt/backend/requirements.txt -r $opt/backend/workers/requirements.txt -r $opt/backend/api/requirements.txt -r $opt/backend/ledger/requirements.txt -r $opt/backend/ml/requirements.txt"
+sshx "$opt/backend/.venv/bin/pip install -q -r $opt/backend/ai/requirements.txt -r $opt/backend/workers/requirements.txt -r $opt/backend/api/requirements.txt -r $opt/backend/ledger/requirements.txt -r $opt/backend/ml/requirements.txt"
 
 Write-Host "== 3. systemd units + env ==" -ForegroundColor Cyan
 scpx "$root\deploy\vultr" /tmp/cw-units
@@ -58,7 +61,7 @@ sshx "chown root:root /etc/cypresswatch.env && chmod 600 /etc/cypresswatch.env"
 sshx "systemctl daemon-reload"
 
 Write-Host "== 4. start + health check ==" -ForegroundColor Cyan
-sshx "systemctl enable cypresswatch.target && systemctl restart cypresswatch.target"
+sshx "systemctl enable cypresswatch.target cypresswatch-api cypresswatch-glm cypresswatch-engine cypresswatch-scheduler cypresswatch-sync && systemctl restart cypresswatch.target"
 Start-Sleep 6
 sshx "systemctl --no-pager --plain list-units 'cypresswatch-*'"
 sshx "curl -sf http://127.0.0.1:8000/health || journalctl -u cypresswatch-api --no-pager -n 20"

@@ -23,7 +23,18 @@ Every `/api/*` endpoint requires `Authorization: Bearer <Auth0 access token>`; `
 The API validates the token signature against the tenant JWKS, issuer, audience, expiry, role,
 and assigned site ids. The browser never supplies trusted identity or MFA headers. See
 [`auth0-api.md`](auth0-api.md) for the environment values and required Post-Login Action claims.
-The **Auth** column below shows what each endpoint enforces today (see Known gaps).
+The **Auth** column below shows what each endpoint enforces.
+
+### Crew sign-in (DeepSpace)
+
+The crew app signs in with DeepSpace and sends `Authorization: Bearer <DeepSpace token>`. The API verifies it
+(ES256, issuer `https://auth.deep.space/api/auth`, public key from `https://auth.deep.space/api/auth/jwks`) and
+treats the caller as role **crew** on the sites listed for their email in `CREW_ASSIGNMENTS`
+(`a@x.com:site_56407|site_621,b@y.com:site_617` in `backend/api/.env`). DeepSpace signs every app's users with
+one platform key, so a valid token only proves the email: **anyone not on the crew list gets `403`**, and a
+DeepSpace token can never be a supervisor. Once a real token shows an app-specific `azp`/`aud`, set
+`DEEPSPACE_AUTHORIZED_PARTIES` so other apps' users are rejected outright. The live feed (`/api/ws`) accepts the
+same token.
 
 ## Routers
 
@@ -47,21 +58,21 @@ roles listed = only those roles; **open** = no token checked yet.
 |---|---|---|---|---|---|
 | GET | `/api/health` | public | | `{"ok": true}` | Everyone |
 | GET | `/api/me` | any | | `me.json` / `Me`; a `"*"` site claim is expanded to every site, role `owner` is returned as `project_owner` | M1, M2 |
-| GET | `/api/sites` | open | | `sites.json` / `SitesResponse`, ranked by hazard score | M1 (map, ranked list) |
+| GET | `/api/sites` | any | | `sites.json` / `SitesResponse`, ranked by hazard score | M1 (map, ranked list) |
 | GET | `/api/sites/summary` | any | | `{server_time, sites[]}`: compact per-site status for the dashboard (see above) | M1 |
-| GET | `/api/sites/{site_id}` | open | | `site_detail.json` / `SiteDetail` (score, factors, explanation, conditions, drift, days like today, storm approach) | M1, M2 |
-| GET | `/api/sites/{site_id}/history` | open | `?hours=48` | `site_history.json` / `SiteHistory`, hourly buckets | M1 (charts) |
-| GET | `/api/sites/{site_id}/insights` | open | | forecast drift + days like today + storm approach + stop-work + 7-day trend | M1 |
-| GET | `/api/scores` | open | `?day_offset=0\|1` (today / tomorrow) | latest score for every site, ranked | M1 |
-| GET | `/api/model` | open | | `model_card.json` / `ModelCard` | M1 (AI/ML spotlight) |
-| GET | `/api/tiger` | open | | live Tiger Data stats: hypertables, compression, aggregates, jobs | M1 (Tiger panel) |
+| GET | `/api/sites/{site_id}` | site | | `site_detail.json` / `SiteDetail` (score, factors, explanation, conditions, drift, days like today, storm approach) | M1, M2 |
+| GET | `/api/sites/{site_id}/history` | site | `?hours=48` | `site_history.json` / `SiteHistory`, hourly buckets | M1 (charts) |
+| GET | `/api/sites/{site_id}/insights` | site | | forecast drift + days like today + storm approach + stop-work + 7-day trend | M1 |
+| GET | `/api/scores` | any | `?day_offset=0\|1` (today / tomorrow) | latest score for every site, ranked | M1 |
+| GET | `/api/model` | any | | `model_card.json` / `ModelCard` | M1 (AI/ML spotlight) |
+| GET | `/api/tiger` | any | | live Tiger Data stats: hypertables, compression, aggregates, jobs | M1 (Tiger panel) |
 | GET | `/api/alerts` | any | `?status=active&site_id=` | `alerts.json` / `AlertsResponse` | M1, M2 |
 | POST | `/api/alerts/{alert_id}/acknowledge` | crew, supervisor | | `ack_response.json` | M2 |
 | POST | `/api/alerts/{alert_id}/override` | supervisor + signed `mfa_at` ≤ 5 min (else `401 step_up_required`) | `override_request.json` | `override_response.json` | M1 |
 | POST | `/api/demo/strike` | supervisor | `demo_strike_request.json` | strike queued; engine emits `stop_work_started` with `simulated: true` | M1 (demo button) |
 | POST | `/api/demo/flood-rain` | supervisor | `{site_id, overnight_in}` | `{flood_alert_expected, river_sites[]}`; flood rule raises `flood_risk` on its next tick, `simulated: true` | M1 (demo button) |
-| GET | `/api/sites/{site_id}/briefing` | open | `?date=YYYY-MM-DD&lang=en\|es` (no date = latest) | `briefing.json` / `Briefing` | M1, M2 |
-| POST | `/api/reports` | open (crew app has no Auth0 token yet) | multipart: `photo` (JPEG/PNG, ≤ 15 MB) + `data` = `report_request.json` | `201` `report_created.json` / `Report` with Gemini `triage`. Same `client_id` again → `409 duplicate` + the existing report | M2 |
+| GET | `/api/sites/{site_id}/briefing` | site | `?date=YYYY-MM-DD&lang=en\|es` (no date = latest) | `briefing.json` / `Briefing` | M1, M2 |
+| POST | `/api/reports` | crew, supervisor + site (reporter taken from the token) | multipart: `photo` (JPEG/PNG, ≤ 15 MB) + `data` = `report_request.json` | `201` `report_created.json` / `Report` with Gemini `triage`. Same `client_id` again → `409 duplicate` + the existing report | M2 |
 | GET | `/api/reports` | supervisor, owner | `?status=pending_review\|confirmed\|dismissed\|all&limit=100` | `{server_time, status, reports[]}`: review queue across the caller's sites | M1 |
 | GET | `/api/reports/{report_id}` | site | | `Report` | M1, M2 |
 | GET | `/api/reports/{report_id}/photo` | site | | JPEG, resized to ≤ 1280 px, EXIF/GPS removed (fetch with the token, show as a blob URL) | M1, M2 |
@@ -101,7 +112,7 @@ Ledger by the scheduler (`workers/scheduler/anchor.py`); supervisor report decis
 
 ## Known gaps
 
-- Endpoints marked **open** above do not check the token yet. `POST /api/reports` stays open until the
-  crew app (DeepSpace sign-in) has an agreed token bridge to this API.
+- Every `/api/*` endpoint checks a token. The crew app still runs with `VITE_USE_MOCKS=true`; to go live it
+  needs `VITE_API_URL` pointing at a public **HTTPS** deployment of this API (phones cannot reach localhost).
 - Errors raised through FastAPI's `HTTPException` (auth, alerts, simulate, ledger) come back wrapped as
   `{"detail": {...}}` instead of the plain error shape.

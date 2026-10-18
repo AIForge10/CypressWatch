@@ -129,9 +129,9 @@ falls back to Flash, and if Gemini is down entirely, plain templates are used. T
 
 | Feature | Guardrail tests | Live Gemini cases | Median latency |
 |---|---|---|---|
-| Explanations | 6/6 | 6/6 | 2.8 s (batch of 5) |
-| Briefing EN+ES | 16/16 | 3/3 | 3.5 s |
-| Photo triage | 15/15 | 5/5 (incl. prompt injection) | 4.1 s |
+| Explanations | 6/6 | 6/6 | 3.0 s (batch of 5) |
+| Briefing EN+ES | 16/16 | 3/3 | 2.7 s |
+| Photo triage | 15/15 | 5/5 (incl. prompt injection) | 2.5 s |
 
 Guardrail tests feed bad outputs to the validators, which must reject all of them, and check the safety
 rules and the fallbacks when Gemini is down. Live cases run real Gemini calls on real site data and photos.
@@ -151,7 +151,7 @@ Flash: median 3.5 s. Argon: median 7.0 s, with more natural wording ("frequent p
 area", "1.9 inches"). The briefing runs once per site in the background at 6 PM, so we use Argon there
 for quality, and Flash for the high-volume explanations and for photo triage, where speed matters.
 
-**Solana devnet wallet:** `7J888M9EHynGgFTiWc9iSCbb5Nc89r1gGGMskhJv4bYp` · [all transactions](https://explorer.solana.com/address/<your address>?cluster=devnet)
+**Solana devnet wallet:** `7J888M9EHynGgFTiWc9iSCbb5Nc89r1gGGMskhJv4bYp` · [all transactions](https://explorer.solana.com/address/7J888M9EHynGgFTiWc9iSCbb5Nc89r1gGGMskhJv4bYp?cluster=devnet)
 
 ## Tiger Data (TimescaleDB) — the timeline behind every safety decision
 

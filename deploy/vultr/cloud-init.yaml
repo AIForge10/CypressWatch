@@ -16,14 +16,11 @@ write_files:
       PYTHONDONTWRITEBYTECODE=1
   - path: /opt/cypresswatch/deploy.lock
     content: "waiting for deploy.ps1 to push the code"
-groups:
-  - cypwatch
+# useradd creates the cypwatch group itself; declaring it separately made useradd fail ("group exists").
 users:
+  - default
   - name: cypwatch
     shell: /bin/bash
-    sudo: false
-    groups:
-      - cypwatch
 runcmd:
   - mkdir -p /opt/cypresswatch /var/lib/cypresswatch /opt/cypresswatch/backend
   - chown -R cypwatch:cypwatch /opt/cypresswatch /var/lib/cypresswatch

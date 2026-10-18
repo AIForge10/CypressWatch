@@ -12,8 +12,8 @@ GET   /api/sites/{site_id}/reports   ReportsResponse
 
 Photos are saved in backend/data/reports/ (git-ignored). photo_url points at /api/reports/{id}/photo.
 
-Auth: reads need an Auth0 token and only return the caller's sites; PATCH is supervisor-only and records who
-decided. POST stays open until the crew app (DeepSpace sign-in) has an agreed token bridge to this API.
+Auth: every endpoint needs a token (Auth0, or a DeepSpace crew token for listed crew emails) and only covers the
+caller's sites. POST takes the reporter from the token; PATCH is supervisor-only and records who decided.
 """
 import hashlib
 import json
@@ -36,7 +36,6 @@ PHOTO_DIR = BACKEND / "data" / "reports"
 MAX_PHOTO_BYTES = 15 * 1024 * 1024
 HAZARDS = {"lightning", "heat", "storm", "flood", "soil_saturation", "wildfire", "wildlife"}  # contract HazardKey
 SEVERITIES = {"low", "medium", "high"}
-DEMO_CREW = {"user_id": "demo|crew", "name": "Field crew"}
 
 
 # ---------- helpers ----------
@@ -84,7 +83,8 @@ def _parse_time(value) -> datetime:
 # ---------- create ----------
 
 @router.post("/reports", status_code=201)
-def create_report(photo: UploadFile = File(...), data: str = Form(...)):
+def create_report(photo: UploadFile = File(...), data: str = Form(...),
+                  user: AuthenticatedUser = Depends(require_roles("crew", "supervisor"))):
     try:
         req = json.loads(data)
     except json.JSONDecodeError:
@@ -92,10 +92,13 @@ def create_report(photo: UploadFile = File(...), data: str = Form(...)):
     site_id = req.get("site_id")
     if not site_id or not db._site(site_id):
         return api_error(404, "not_found", f"Unknown site {site_id}")
+    require_site_access(user, site_id)
     client_id = str(req.get("client_id") or uuid.uuid4())
     reporter_hazard = req.get("reporter_hazard") if req.get("reporter_hazard") in HAZARDS else None
 
     existing = _by_client_id(client_id)  # offline replay: don't pay for Gemini twice
+    if existing and not user.can_access_site(existing["site_id"]):
+        return api_error(409, "duplicate", "This report was already uploaded.")
     if existing:
         return JSONResponse(status_code=409, content={
             "error": "duplicate", "message": "This report was already uploaded.",
@@ -129,7 +132,7 @@ def create_report(photo: UploadFile = File(...), data: str = Form(...)):
         "lat": req.get("lat"), "lon": req.get("lon"), "note": req.get("note") or "",
         "photo_url": f"/api/reports/{report_id}/photo",
         "captured_at": _parse_time(req.get("captured_at")),
-        "reported_by": req.get("reported_by") or DEMO_CREW,
+        "reported_by": {"user_id": user.user_id, "name": user.name},  # from the token, never the request body
         "triage": triage, "status": "pending_review"})
     if not created:  # two uploads raced; keep the first
         _photo_path(report_id).unlink(missing_ok=True)
