@@ -1,4 +1,4 @@
-import { StrictMode, Suspense, lazy, useEffect, useRef, useState } from 'react';
+import { StrictMode, Suspense, lazy, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Map, { Marker, NavigationControl, Popup } from 'react-map-gl/maplibre';
@@ -75,7 +75,7 @@ function SiteMap({ filteredSites }: { filteredSites: Site[] }) {
     <Map initialViewState={{ longitude: -81.7, latitude: 28.2, zoom: 6.4 }} mapStyle={floridaMapStyle} reuseMaps>
       <NavigationControl position="top-right" />
       {filteredSites.map((site) => <Marker key={site.id} longitude={site.longitude} latitude={site.latitude} anchor="center">
-        <button type="button" className={`cw-map-marker cw-map-marker-${toneClass(site)}`} style={{ width: `${28 + site.riskScore * 2}px`, height: `${28 + site.riskScore * 2}px` }} aria-label={`${site.name}, risk ${site.riskScore}`} onClick={() => setSelectedSite(site)}>{site.riskScore.toFixed(1)}</button>
+        <div className="cw-map-marker-wrap" style={{ '--marker-size': `${28 + site.riskScore * 2}px` } as CSSProperties}><span className={`cw-map-marker-tail cw-map-marker-${toneClass(site)}`} aria-hidden="true" /><button type="button" className={`cw-map-marker cw-map-marker-${toneClass(site)}`} aria-label={`${site.name}, risk ${site.riskScore}`} onClick={() => setSelectedSite(site)}><span className="cw-map-marker-value">{site.riskScore.toFixed(1)}</span></button></div>
       </Marker>)}
       {selectedSite && <Popup longitude={selectedSite.longitude} latitude={selectedSite.latitude} anchor="bottom" closeOnClick={false} onClose={() => setSelectedSite(null)}>
         <div className="cw-map-popup"><strong>{selectedSite.name}</strong><span>{selectedSite.location}</span><span>Risk score: {selectedSite.riskScore.toFixed(1)} · {selectedSite.riskLevel}</span><Link to={`/app/supervisor/sites/${selectedSite.id}`}>View site details</Link></div>

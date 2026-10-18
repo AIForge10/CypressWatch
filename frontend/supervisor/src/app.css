@@ -71,11 +71,17 @@
 .cw-interactive-map .maplibregl-ctrl-group button:hover { color: white; background: var(--cw-brand); }
 .cw-interactive-map .maplibregl-ctrl-attrib { color: var(--cw-brand-strong); background: rgb(255 255 255 / 82%); }
 .cw-interactive-map .maplibregl-ctrl-attrib a { color: var(--cw-brand); }
-.cw-map-marker { display: grid; place-items: center; padding: 0; border: 3px solid white; border-radius: 50%; color: white; box-shadow: 0 3px 8px rgb(53 53 49 / 28%); cursor: pointer; font-size: 11px; font-weight: 800; transform: translate(-50%, -50%); }
+.cw-map-marker-wrap { position: relative; width: 0; height: 0; animation: cw-map-marker-bounce 1.8s ease-in-out infinite; }
+.cw-map-marker { position: absolute; top: 0; left: 0; display: grid; place-items: center; width: var(--marker-size); height: var(--marker-size); padding: 0 0 18%; border: 2px solid rgb(255 255 255 / 92%); border-radius: 48% 48% 48% 10%; clip-path: polygon(50% 100%, 5% 43%, 14% 14%, 34% 4%, 66% 4%, 86% 14%, 95% 43%); color: white; filter: drop-shadow(0 4px 4px rgb(53 53 49 / 32%)); cursor: pointer; font-size: 11px; font-weight: 800; transform: translate(-50%, -50%) perspective(80px) rotateX(8deg); transform-origin: 50% 58%; transition: filter 160ms ease, scale 160ms ease; }
+.cw-map-marker::before { content: ''; position: absolute; inset: 7% 18% 45%; border-radius: 50%; background: rgb(255 255 255 / 36%); pointer-events: none; }
+.cw-map-marker-tail { position: absolute; z-index: -1; top: calc(var(--marker-size) / 2 - 2px); left: -2px; width: 4px; height: 16px; border-radius: 0 0 4px 4px; box-shadow: 0 2px 3px rgb(53 53 49 / 28%); }
+.cw-map-marker-value { position: relative; z-index: 1; text-shadow: 0 1px 2px rgb(0 0 0 / 38%); }
 .cw-map-marker-danger { background: var(--cw-danger); }
 .cw-map-marker-warning { background: var(--cw-warning); }
 .cw-map-marker-success { background: var(--cw-success); }
-.cw-map-marker:hover, .cw-map-marker:focus-visible { outline: 3px solid var(--cw-brand-soft); outline-offset: 2px; }
+.cw-map-marker:hover, .cw-map-marker:focus-visible { outline: 3px solid var(--cw-brand-soft); outline-offset: 2px; filter: drop-shadow(0 6px 6px rgb(53 53 49 / 42%)); scale: 1.12; }
+@keyframes cw-map-marker-bounce { 0%, 100% { translate: 0 0; } 50% { translate: 0 -7px; } }
+@media (prefers-reduced-motion: reduce) { .cw-map-marker-wrap { animation: none; } }
 .cw-map-popup { display: grid; gap: 4px; min-width: 170px; color: var(--cw-ink); font-size: 12px; }
 .cw-map-popup strong { font-size: 14px; }
 .cw-map-popup a { margin-top: 4px; color: var(--cw-brand); font-weight: 700; }
