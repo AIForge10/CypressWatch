@@ -55,13 +55,15 @@ def latest_score(scores_file: Path, site_id: str):
 def active_stop_remaining(state_file: Path, site_id: str):
     """Seconds left on the site's active stop-work, or None when it is not active."""
     data = json.loads(state_file.read_text())
-    for alert in data.get("alerts", []):
-        # flood_risk warnings are active too but carry no stop-work countdown
-        if (alert["site_id"] == site_id and alert.get("status") == "active"
-                and alert.get("type", "stop_work_lightning") == "stop_work_lightning" and alert.get("stop_work_until")):
-            until = datetime.datetime.fromisoformat(alert["stop_work_until"].replace("Z", "+00:00"))
-            return max(0, int((until - datetime.datetime.now(datetime.timezone.utc)).total_seconds()))
-    return None
+    # flood_risk warnings are active too but carry no stop-work countdown; several stop-works can be open,
+    # and the crew must wait for the one that ends last.
+    ends = [a["stop_work_until"] for a in data.get("alerts", [])
+            if a["site_id"] == site_id and a.get("status") == "active"
+            and a.get("type", "stop_work_lightning") == "stop_work_lightning" and a.get("stop_work_until")]
+    if not ends:
+        return None
+    until = datetime.datetime.fromisoformat(max(ends).replace("Z", "+00:00"))
+    return max(0, int((until - datetime.datetime.now(datetime.timezone.utc)).total_seconds()))
 
 
 def server_stop_remaining(server: str, key: str, site_id: str):
@@ -71,19 +73,19 @@ def server_stop_remaining(server: str, key: str, site_id: str):
     with urllib.request.urlopen(req, timeout=8) as res:
         state = json.loads(res.read())
     if not state.get("active"):
-        return None
+        return None, None
     until = datetime.datetime.fromisoformat(state["stop_work_until"].replace("Z", "+00:00"))
     now = datetime.datetime.fromisoformat(state["server_time"].replace("Z", "+00:00"))  # server clock, no skew
-    return max(0, int((until - now).total_seconds()))
+    return max(0, int((until - now).total_seconds())), state["stop_work_until"]
 
 
 def run_server_mode(args, send) -> None:
     """Follow the deployed engine over HTTPS; a network blip keeps the last state instead of clearing it."""
     print(f"following {args.site} on {args.server}", file=sys.stderr)
-    was_active, last_sent = False, 0.0
+    was_active, last_sent, last_until = False, 0.0, None
     while True:
         try:
-            remaining = server_stop_remaining(args.server, args.key, args.site)
+            remaining, until = server_stop_remaining(args.server, args.key, args.site)
         except urllib.error.HTTPError as exc:
             print(f"warning: server answered {exc.code} (check --key / BEACON_KEY)", file=sys.stderr)
             time.sleep(max(args.interval, 5)); continue
@@ -91,11 +93,12 @@ def run_server_mode(args, send) -> None:
             print(f"warning: server unreachable ({exc}); keeping last state", file=sys.stderr)
             time.sleep(max(args.interval, 5)); continue
         active = remaining is not None and remaining > 0
-        if active and (not was_active or time.time() - last_sent > 60):  # start, or refresh the countdown each minute
+        # New stop-work, a new strike that moved the end time (countdown resets at once), or a minute refresh.
+        if active and (not was_active or until != last_until or time.time() - last_sent > 60):
             send(f"STRIKE {max(remaining, 60)}"); last_sent = time.time()
         elif not active and was_active:
             send("ALLCLEAR")
-        was_active = active
+        was_active, last_until = active, (until if active else None)
         time.sleep(args.interval)
 
 
