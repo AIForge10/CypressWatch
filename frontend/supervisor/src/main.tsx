@@ -116,7 +116,7 @@ function useLiveSites() {
     const refresh = async () => {
       try {
         const response = await live.summary(getAccessToken);
-        if (!Array.isArray(response.sites) || response.sites.length === 0) throw new Error('No assigned sites returned');
+        if (!Array.isArray(response.sites) || response.sites.length === 0) throw new Error('Signed in, but no sites are assigned to your account. Ask an admin to set app_metadata.site_ids (or ["*"]) in Auth0, then sign in again');
         if (response.sites.some((site) => site.hazard_score === null || !isRiskLevel(site.risk_level) || !site.scored_at)) {
           throw new Error('Hazard scores are unavailable for one or more assigned sites');
         }

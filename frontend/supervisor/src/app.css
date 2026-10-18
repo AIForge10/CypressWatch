@@ -208,6 +208,15 @@
 [data-theme='dark'] .cw-interactive-map .maplibregl-ctrl-attrib { color: #dbe9e8; background: rgb(32 37 35 / 84%); }
 [data-theme='dark'] .cw-interactive-map .maplibregl-ctrl-attrib a { color: var(--cw-brand-soft); }
 .cw-auth-loading p { margin: 0; }
+.cw-access-denied { display: grid; width: min(560px, 100%); gap: 12px; padding: 28px; border: 1px solid var(--cw-border); border-radius: var(--cw-radius-lg); background: var(--cw-surface); box-shadow: var(--cw-shadow-sm); text-align: left; line-height: 1.5; }
+.cw-access-denied p { margin: 0; }
+.cw-access-denied strong, .cw-access-denied h1 { color: var(--cw-ink); }
+.cw-access-denied-steps { padding: 14px 16px; border-radius: var(--cw-radius-md); background: var(--cw-subtle); }
+.cw-access-denied-steps ol { margin: 6px 0 8px; padding-left: 20px; }
+.cw-access-denied pre { margin: 0 0 8px; padding: 10px 12px; overflow-x: auto; border: 1px solid var(--cw-border); border-radius: var(--cw-radius-sm); color: var(--cw-ink); background: var(--cw-surface); font-size: 13px; }
+.cw-access-denied-id { font-size: 12px; overflow-wrap: anywhere; }
+.cw-access-denied-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.cw-access-denied-note { font-size: 12px; }
 .cw-report-list { display: grid; gap: 16px; }
 .cw-report { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 20px; align-items: start; padding: 16px; }
 .cw-report .cw-section-heading { padding: 0; }
