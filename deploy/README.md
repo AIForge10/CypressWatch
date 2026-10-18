@@ -9,6 +9,12 @@ phones / browsers ──HTTPS──> Caddy :443 ──> API 127.0.0.1:8000 ─�
                                             scheduler ─ engine ─ GLM ─ sync (workers)
 ```
 
+## No server yet? Run it from a laptop
+
+`scripts/demo_stack.sh` starts the API (if needed), scheduler and Tiger sync, and publishes the API over HTTPS
+with a free Cloudflare quick tunnel (no account). It prints a `https://….trycloudflare.com` URL for the crew app.
+The laptop must stay on and the URL changes on every restart, so move to the server below for the real demo.
+
 ## Files
 
 | File | Role |
