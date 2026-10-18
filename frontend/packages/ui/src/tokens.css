@@ -26,6 +26,25 @@
   --cw-radius-md: 6px;
   --cw-radius-lg: 8px;
   --cw-shadow-sm: 0 1px 2px rgb(53 53 49 / 7%);
+  --cw-sidebar: #353531;
+}
+
+:root[data-theme='dark'] {
+  color: #eef4f4;
+  background: #090809;
+  color-scheme: dark;
+  --cw-ink: #eef4f4;
+  --cw-muted: #b7c0c1;
+  --cw-subtle: #111314;
+  --cw-surface: #1b1e1f;
+  --cw-border: #363b3c;
+  --cw-brand-strong: #eef4f4;
+  --cw-sidebar: #050606;
+  --cw-danger-soft: #57322d;
+  --cw-warning-soft: #57322d;
+  --cw-success-soft: #294541;
+  --cw-info-soft: #29434a;
+  --cw-shadow-sm: 0 1px 3px rgb(0 0 0 / 24%);
 }
 
 * { box-sizing: border-box; }
