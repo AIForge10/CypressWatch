@@ -1,4 +1,4 @@
-import { StrictMode, Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { StrictMode, Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, Navigate, NavLink, Outlet, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import Map, { Marker, NavigationControl, Popup } from 'react-map-gl/maplibre';
@@ -6,7 +6,6 @@ import type { StyleSpecification } from 'maplibre-gl';
 import { Badge, Button, Card, PageHeader } from '@cypresswatch/ui';
 import { AccessDenied, AuthProvider, RequireAuth, RequireRole, useAuth } from './auth';
 import { live, summaryToSite } from './live';
-import type { SiteSummary } from './live';
 import { riskTone, siteDetailData, sites as demoSites, type RiskLevel, type Site } from './data';
 import './app.css';
 import '@cypresswatch/ui/tokens.css';
@@ -83,22 +82,50 @@ function SiteMap({ filteredSites }: { filteredSites: Site[] }) {
   </div>;
 }
 
-function SiteLocationContext({ site }: { site: Site }) {
+function SiteLocationContext({ site, liveMode }: { site: Site; liveMode: boolean }) {
   return <Card className="cw-location-context">
     <div className="cw-location-context-heading">
       <div><p className="cw-eyebrow">Mapped surroundings</p><h2>Near this site pin</h2><p>Roads, waterways, and neighboring land shown at the site’s mapped coordinates.</p></div>
       <span className="cw-location-coordinates">{site.latitude.toFixed(3)}°, {site.longitude.toFixed(3)}°</span>
     </div>
-    <div className="cw-location-map" aria-label={`Street map near the demo pin for ${site.name}`}>
+    <div className="cw-location-map" aria-label={`Street map near the ${liveMode ? 'backend' : 'demo'} pin for ${site.name}`}>
       <Map key={site.id} initialViewState={{ latitude: site.latitude, longitude: site.longitude, zoom: 12 }} mapStyle={floridaMapStyle} reuseMaps>
         <NavigationControl position="top-right" showCompass={false} />
         <Marker longitude={site.longitude} latitude={site.latitude} anchor="bottom">
-          <span className="cw-location-pin" aria-label={`${site.name} demo pin`}>●</span>
+          <span className="cw-location-pin" aria-label={`${site.name} ${liveMode ? 'backend' : 'demo'} pin`}>●</span>
         </Marker>
       </Map>
     </div>
-    <p className="cw-location-context-note">Demo pin, not a surveyed facility boundary. Basemap: OpenStreetMap contributors. The 3D plant and terrain above are illustrative and do not depict this mapped location.</p>
+    <p className="cw-location-context-note">{liveMode ? 'Backend site coordinates, not a surveyed facility boundary.' : 'Demo pin, not a surveyed facility boundary.'} Basemap: OpenStreetMap contributors. The 3D plant and terrain above are illustrative and do not depict this mapped location.</p>
   </Card>;
+}
+
+function useLiveSites() {
+  const [sitesLive, setSitesLive] = useState<Site[] | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
+  useEffect(() => {
+    let stopped = false;
+    const refresh = async () => {
+      try {
+        const response = await live.summary();
+        if (!Array.isArray(response.sites) || response.sites.length === 0) throw new Error('No sites returned');
+        if (!stopped) {
+          setSitesLive(response.sites.map(summaryToSite));
+          setLiveError(null);
+        }
+      } catch (error) {
+        if (!stopped) {
+          setSitesLive(null);
+          setLiveError(error instanceof Error ? error.message : 'Live feed unavailable');
+        }
+      }
+    };
+    void refresh();
+    const polling = window.setInterval(() => { void refresh(); }, 15_000);
+    const socket = live.openEvents(() => { void refresh(); });
+    return () => { stopped = true; window.clearInterval(polling); socket.close(); };
+  }, []);
+  return { sitesLive, liveError };
 }
 
 function SupervisorHome() {
@@ -110,7 +137,26 @@ function SupervisorHome() {
   const filteredSites = sites.filter((site) => (risk === 'All' || site.riskLevel === risk) && (hazard === 'All' || site.primaryHazards.includes(hazard as Site['primaryHazards'][number])) && `${site.name} ${site.location}`.toLowerCase().includes(search.toLowerCase())).sort((a, b) => b.riskScore - a.riskScore);
   const alertSite = sites.find((site) => site.activeAlert?.status === 'active');
   const staleCount = sites.filter((site) => site.dataFreshness !== 'Fresh').length;
-  return <div><PageHeader eyebrow="Supervisor workspace" title="Site operations overview" description="What needs attention right now across your assigned sites." /><div>{alertSite && <StopWorkBanner site={alertSite} />}</div><div className="cw-grid-metrics"><Metric label="Assigned sites" value={sites.length} note="All operational sites" /><Metric label="High or critical risk" value={sites.filter((site) => site.riskScore >= 7).length} note="Requires supervisor attention" /><Metric label="Active stop-work" value={sites.filter((site) => site.activeAlert?.status === 'active').length} note="Deterministic alert state" /><Metric label="Stale sources" value={staleCount} note="Review before relying on data" /></div><div className="cw-filter-bar"><input className="cw-input" aria-label="Search sites" placeholder="Search site or location" value={search} onChange={(event) => setSearch(event.target.value)} /><select className="cw-select" aria-label="Filter by risk level" value={risk} onChange={(event) => setRisk(event.target.value as typeof risk)}><option>All</option><option>Critical</option><option>High</option><option>Elevated</option><option>Guarded</option><option>Low</option></select><select className="cw-select" aria-label="Filter by hazard" value={hazard} onChange={(event) => setHazard(event.target.value)}><option>All</option><option>Lightning</option><option>Heat</option><option>Flooding</option><option>Wildfire</option><option>Soil saturation</option></select></div><div className="cw-dashboard-grid"><Card><div className="cw-section-heading"><h2>Site map</h2><span className="cw-muted">Last updated just now</span></div><SiteMap filteredSites={filteredSites} /><p className="cw-map-note">Pins use demo coordinates, not surveyed facility locations.</p></Card><Card><div className="cw-section-heading"><h2>Ranked sites</h2><span className="cw-muted">{filteredSites.length} shown</span></div><div className="cw-site-list">{filteredSites.length ? filteredSites.map((site) => <SiteRow key={site.id} site={site} />) : <div style={{ padding: 24 }}><p style={{ margin: 0 }}>No sites match these filters.</p></div>}</div></Card></div></div>;
+  return <div>
+    <PageHeader eyebrow="Supervisor workspace" title="Site operations overview" description="What needs attention right now across your assigned sites." />
+    <p className="cw-muted" role="status">{sitesLive ? 'Live backend data' : `Demo data${liveError ? ' · backend unavailable' : ' · checking backend'}`}</p>
+    {alertSite && <StopWorkBanner site={alertSite} demo={!sitesLive} />}
+    <div className="cw-grid-metrics">
+      <Metric label="Assigned sites" value={sites.length} note="All operational sites" />
+      <Metric label="High or critical risk" value={sites.filter((site) => site.riskScore >= 7).length} note="Requires supervisor attention" />
+      <Metric label="Active stop-work" value={sites.filter((site) => site.activeAlert?.status === 'active').length} note="Deterministic alert state" />
+      <Metric label="Stale sources" value={staleCount} note="Review before relying on data" />
+    </div>
+    <div className="cw-filter-bar">
+      <input className="cw-input" aria-label="Search sites" placeholder="Search site or location" value={search} onChange={(event) => setSearch(event.target.value)} />
+      <select className="cw-select" aria-label="Filter by risk level" value={risk} onChange={(event) => setRisk(event.target.value as typeof risk)}><option>All</option><option>Critical</option><option>High</option><option>Elevated</option><option>Guarded</option><option>Low</option></select>
+      <select className="cw-select" aria-label="Filter by hazard" value={hazard} onChange={(event) => setHazard(event.target.value)}><option>All</option><option>Lightning</option><option>Heat</option><option>Flooding</option><option>Wildfire</option><option>Soil saturation</option></select>
+    </div>
+    <div className="cw-dashboard-grid">
+      <Card><div className="cw-section-heading"><h2>Site map</h2><span className="cw-muted">{sitesLive ? 'Live site summary' : 'Demo site data'}</span></div><SiteMap filteredSites={filteredSites} /><p className="cw-map-note">{sitesLive ? 'Pins use the backend site coordinates; the 3D scenes remain illustrative.' : 'Pins use demo coordinates, not surveyed facility locations.'}</p></Card>
+      <Card><div className="cw-section-heading"><h2>Ranked sites</h2><span className="cw-muted">{filteredSites.length} shown</span></div><div className="cw-site-list">{filteredSites.length ? filteredSites.map((site) => <SiteRow key={site.id} site={site} />) : <div style={{ padding: 24 }}><p style={{ margin: 0 }}>No sites match these filters.</p></div>}</div></Card>
+    </div>
+  </div>;
 }
 
 const STOP_WORK_SECONDS = 30 * 60;
@@ -145,11 +191,11 @@ function SiteBeacon({ site, active, secondsLeft, strikeCount, strikeAnimationId,
         <div className="cw-beacon-controls-hint" aria-hidden="true">Drag to rotate · Scroll to zoom</div>
       </div>
       <div className="cw-beacon-readout">
-        <p className="cw-beacon-readout-label">{active ? 'Time until all-clear (30 min rule)' : 'Perimeter status'}</p>
+        <p className="cw-beacon-readout-label">{active ? liveMode ? 'Time until eligible for backend all-clear' : 'Time until demo all-clear' : 'Perimeter status'}</p>
         <div className="cw-beacon-timer" aria-live="off">{active ? countdown : '00:00'}</div>
         <div className="cw-beacon-progress" role="progressbar" aria-label="Demo stop-work countdown" aria-valuemin={0} aria-valuemax={STOP_WORK_SECONDS} aria-valuenow={secondsLeft}><span style={{ width: `${(secondsLeft / STOP_WORK_SECONDS) * 100}%` }} /></div>
-        <p className="cw-beacon-message" role="status">{active ? 'Work remains paused. A new strike within 10 miles resets the 30-minute timer.' : hasLightningHazard ? 'Demo lightning all-clear. Other site hazards still need review; a new strike returns this beacon to stop-work.' : 'No lightning hazard is shown for this site. Review any other site hazards before authorizing work.'}</p>
-        {hasLightningHazard && <div className="cw-beacon-actions"><Button onClick={onStrike}>Simulate lightning strike</Button>{active && <Button variant="quiet" onClick={onRequestAllClear}>Request early all-clear</Button>}</div>}
+        <p className="cw-beacon-message" role="status">{active ? `Work remains paused. A new strike within 10 miles resets the 30-minute timer.${liveMode ? ' Only the backend can clear a live alert.' : ''}` : hasLightningHazard ? 'No active lightning stop-work shown. Other hazards still need review; a new strike may return this beacon to stop-work.' : 'No lightning hazard is shown for this site. Review any other site hazards before authorizing work.'}</p>
+        {hasLightningHazard && <div className="cw-beacon-actions"><Button onClick={onStrike} disabled={strikePending}>{strikePending ? 'Queuing strike…' : 'Simulate lightning strike'}</Button>{active && <Button variant="quiet" onClick={onRequestAllClear}>Request early all-clear</Button>}</div>}
         {verificationMessage && <p className="cw-step-up-feedback" role="status">{verificationMessage}</p>}
         <p className="cw-beacon-disclaimer">Visualization only. The 3D facility, terrain, and strike distances are illustrative, not geographic scale. Weather is inferred from mock hazards; strikes and status do not authorize field work.</p>
       </div>
@@ -157,16 +203,16 @@ function SiteBeacon({ site, active, secondsLeft, strikeCount, strikeAnimationId,
   </Card>;
 }
 
-function SiteDecisionSummary({ site, active, secondsLeft }: { site: Site; active: boolean; secondsLeft: number }) {
+function SiteDecisionSummary({ site, active, secondsLeft, liveMode }: { site: Site; active: boolean; secondsLeft: number; liveMode: boolean }) {
   const leadingHazard = site.hazards[0];
   const orbState = active ? 'stop' : site.riskLevel === 'Critical' || site.riskLevel === 'High' || site.riskLevel === 'Elevated' ? 'watch' : 'monitor';
   const countdown = `${String(Math.floor(secondsLeft / 60)).padStart(2, '0')}:${String(secondsLeft % 60).padStart(2, '0')}`;
   return <section className={`cw-decision-summary${active ? ' cw-decision-summary-active' : ''}`} aria-labelledby="site-decision-title">
     <div className="cw-decision-main">
-      <p className="cw-decision-kicker">01 / Current site status <span>Demo data</span></p>
+      <p className="cw-decision-kicker">01 / Current site status <span>{liveMode ? 'Live backend data' : 'Demo data'}</span></p>
       <h2 id="site-decision-title">{active ? 'Stop exposed work' : 'No active stop-work alert shown'}</h2>
       <p className="cw-decision-guidance">{active
-        ? 'A lightning strike is inside the demo 10-mile perimeter. Keep exposed work paused and review current conditions before any reopening decision.'
+        ? `${liveMode ? 'The backend reports an active lightning stop-work.' : 'A lightning strike is inside the demo 10-mile perimeter.'} Keep exposed work paused and review current conditions before any reopening decision.`
         : site.primaryHazards.length
           ? 'Other hazards are still reported for this site. Review their evidence and freshness before deciding whether work can proceed.'
           : 'No hazard contributors are reported in the demo data. Confirm current site conditions and source freshness before authorizing work.'}</p>
@@ -187,32 +233,32 @@ function SiteDetail() {
   const { siteId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isMockAuth, requestStepUp, hasFreshMfa } = useAuth();
+  const { isMockAuth, requestStepUp, hasFreshMfa } = useAuth();
   const { sitesLive, liveError } = useLiveSites();
-  const liveMode = sitesLive !== null;
-  const site = (sitesLive ?? demoSites).find((item) => item.id === siteId);
+  const liveSite = sitesLive?.find((item) => item.id === siteId);
+  const liveMode = Boolean(liveSite);
+  const site = liveSite ?? demoSites.find((item) => item.id === siteId);
   const detail = siteId ? siteDetailData[siteId] : undefined;
-  const [strikeCount, setStrikeCount] = useState(0);
+  const [strikeCount, setStrikeCount] = useState(() => demoSites.find((item) => item.id === siteId)?.activeAlert?.status === 'active' ? 1 : 0);
   const [strikeAnimationId, setStrikeAnimationId] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [stepUpOpen, setStepUpOpen] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<string | null>(null);
   const [stepUpPending, setStepUpPending] = useState(false);
-  const [ackPending, setAckPending] = useState(false);
-  const [overridePending, setOverridePending] = useState(false);
   const [strikePending, setStrikePending] = useState(false);
   const processingStepUp = useRef(false);
-  const alertId = liveMode ? site?.activeAlert?.alertId : undefined;
   const lastSiteId = useRef(siteId);
+  const [demoUntil, setDemoUntil] = useState<number | null>(() => demoSites.find((item) => item.id === siteId)?.activeAlert?.status === 'active' ? Date.now() + STOP_WORK_SECONDS * 1000 : null);
   useEffect(() => {
     if (lastSiteId.current === siteId) return;
     lastSiteId.current = siteId;
+    setDemoUntil(demoSites.find((item) => item.id === siteId)?.activeAlert?.status === 'active' ? Date.now() + STOP_WORK_SECONDS * 1000 : null);
+    setStrikeCount(demoSites.find((item) => item.id === siteId)?.activeAlert?.status === 'active' ? 1 : 0);
     setStrikeAnimationId(0);
     setNow(Date.now());
     setVerificationMessage(null);
   }, [siteId]);
-  // Live stops work stop_work_until ISO from the backend; a local snapshot is used in offline demo mode.
-  const [demoUntil, setDemoUntil] = useState<number | null>(null);
+  // Live countdown comes from backend state; the local snapshot is only for demo sites.
   const liveUntilEpoch = site?.activeAlert?.allClearAt ? Date.parse(site.activeAlert.allClearAt) : NaN;
   const stopWorkUntil: number | null = liveMode ? (Number.isFinite(liveUntilEpoch) ? liveUntilEpoch : null) : demoUntil;
   useEffect(() => {
@@ -224,21 +270,6 @@ function SiteDetail() {
     }, 1000);
     return () => window.clearInterval(interval);
   }, [stopWorkUntil]);
-  const doOverride = useCallback((reason: string) => {
-    if (!alertId || !user) return Promise.resolve(false);
-    setOverridePending(true);
-    return live.override(alertId, { userId: user.id, name: user.name }, reason).then((response) => {
-      setStepUpOpen(false);
-      setVerificationMessage(response?.ledger_record_id
-        ? `Override queued. The decision is recorded as ${response.ledger_record_id} in the safety ledger.`
-        : 'Override queued with the backend.');
-    }).catch((error: Error & { status?: number; detail?: { error?: string } }) => {
-      setVerificationMessage(error.status === 401 && error.detail?.error === 'step_up_required'
-        ? 'The backend requires step-up MFA before an override. Sign in with Auth0 and re-verify.'
-        : liveMode ? `Backend refused the override (${error.message}).` : 'Demo-only outcome shown. No live alert was changed.');
-      setStepUpOpen(false);
-    }).finally(() => setOverridePending(false));
-  }, [alertId, user, liveMode]);
   useEffect(() => {
     if (new URLSearchParams(location.search).get('step_up') !== 'returned' || !siteId) {
       processingStepUp.current = false;
@@ -252,15 +283,14 @@ function SiteDetail() {
     let request: { siteId: string; requestedAt: number } | null = null;
     try { request = rawRequest ? JSON.parse(rawRequest) : null; } catch { /* Invalid state fails closed. */ }
     if (request?.siteId === siteId && Date.now() - request.requestedAt < 5 * 60 * 1000 && hasFreshMfa(request.requestedAt)) {
-      void doOverride('Step-up MFA verified via Auth0 reauthentication');
-      setVerificationMessage('Auth0 MFA completed. Recording the override with the backend…');
+      setVerificationMessage('Auth0 MFA completed for this preview. Live all-clear is unavailable until the backend verifies Auth0 tokens and MFA itself; the stop-work remains active.');
     } else {
       setVerificationMessage('MFA was not confirmed. Stop-work remains active. Ask an admin to enable the step-up MFA Action in Auth0.');
     }
-  }, [hasFreshMfa, location.pathname, location.search, navigate, siteId, doOverride]);
+  }, [hasFreshMfa, location.pathname, location.search, navigate, siteId]);
   if (!site) return <Placeholder title="Site not found" description="This site is not available in the current assignment." />;
   const secondsLeft = stopWorkUntil === null ? 0 : Math.max(0, Math.ceil((stopWorkUntil - now) / 1000));
-  const active = secondsLeft > 0;
+  const active = liveMode ? site.activeAlert?.status === 'active' : secondsLeft > 0;
   const siteDetail = detail ?? { forecast: [], briefing: null, reports: [] };
   const simulateStrike = () => {
     setStrikeCount((previous) => previous + 1);
@@ -277,14 +307,6 @@ function SiteDetail() {
       setDemoUntil(Date.now() + STOP_WORK_SECONDS * 1000); // offline demo countdown
     }
   };
-  const acknowledge = () => {
-    if (!alertId || !user) return;
-    setAckPending(true);
-    void live.acknowledge(alertId, { userId: user.id, name: user.name })
-      .then(() => setVerificationMessage('Acknowledged. The decision reaches the safety ledger on the next anchor.'))
-      .catch((error: Error) => setVerificationMessage(`Acknowledgment failed (${error.message}).`))
-      .finally(() => setAckPending(false));
-  };
   const verifyWithAuth0 = async () => {
     if (!siteId || isMockAuth) return;
     setStepUpPending(true);
@@ -300,19 +322,19 @@ function SiteDetail() {
   };
   return <div>
     <PageHeader eyebrow="Site risk detail" title={site.name} description={`${site.location} · Last updated ${site.lastUpdated}`} actions={<Link to="/app/supervisor" className="cw-button cw-button-secondary">Back to overview</Link>} />
-    <SiteDecisionSummary site={site} active={active} secondsLeft={secondsLeft} />
-    <SiteBeacon site={site} active={active} secondsLeft={secondsLeft} strikeCount={beaconAlert.strikeCount} strikeAnimationId={strikeAnimationId} onStrike={simulateStrike} onRequestAllClear={() => setStepUpOpen(true)} verificationMessage={verificationMessage} />
-    <div id="site-context"><SiteLocationContext site={site} /></div>
+    {!liveMode && <p className="cw-muted" role="status">Demo site data{liveError ? ' · live backend unavailable' : sitesLive ? ' · not present in live feed' : ' · checking live backend'}</p>}
+    <SiteDecisionSummary site={site} active={active} secondsLeft={secondsLeft} liveMode={liveMode} />
+    <SiteBeacon site={site} active={active} secondsLeft={secondsLeft} strikeCount={strikeCount} strikeAnimationId={strikeAnimationId} liveMode={liveMode} strikePending={strikePending} onStrike={simulateStrike} onRequestAllClear={() => setStepUpOpen(true)} verificationMessage={verificationMessage} />
+    <div id="site-context"><SiteLocationContext site={site} liveMode={liveMode} /></div>
     {stepUpOpen && <div className="cw-step-up-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setStepUpOpen(false); }}><div className="cw-step-up-dialog" role="dialog" aria-modal="true" aria-labelledby="cw-step-up-title">
       <p className="cw-eyebrow">Supervisor approval · {liveMode ? 'Live' : 'Demo'}</p>
       <h2 id="cw-step-up-title">Early all-clear requires step-up MFA</h2>
-      <p>{liveMode ? 'Before clearing a stop-work alert early, the supervisor must confirm the site and complete a fresh Auth0 MFA challenge. The backend then queues the override for the engine and records it.' : 'Demo screen: in offline mode the action is simulated; the real flow posts a queued override to the backend.'}</p>
+      <p>{liveMode ? 'The backend still trusts a client-supplied MFA header. Live early all-clear is disabled until it validates an Auth0 token and MFA claim itself.' : 'Demo screen: in offline mode the action is simulated. It cannot authorize field work.'}</p>
       <div className="cw-step-up-summary"><strong>{site.name}</strong><span>Lightning perimeter · {secondsLeft > 0 ? `${Math.floor(secondsLeft / 60)}m ${String(secondsLeft % 60).padStart(2, '0')}s` : 'Expired'} remaining</span></div>
-      <ol className="cw-step-up-steps"><li>Review the active hazard and site.</li><li>Reauthenticate with Auth0 and complete MFA.</li><li>Backend validates role, MFA freshness, alert state, and records the decision.</li></ol>
+      <ol className="cw-step-up-steps"><li>Review the active hazard and site.</li><li>Reauthenticate with Auth0 and complete MFA.</li><li>A production backend must validate the token, role, MFA freshness, and alert state before recording the decision.</li></ol>
       <div className="cw-step-up-actions">
         <Button variant="quiet" onClick={() => setStepUpOpen(false)}>Cancel</Button>
-        {isMockAuth && liveMode && alertId && <Button disabled={overridePending} onClick={() => { void doOverride('Demo override (mock authentication, not MFA-verified)'); }}>{overridePending ? 'Sending override…' : 'Send override (demo clearance)'}</Button>}
-        {!isMockAuth && liveMode && alertId && <Button onClick={() => { void verifyWithAuth0(); }} disabled={stepUpPending}>{stepUpPending ? 'Opening Auth0…' : 'Verify with Auth0'}</Button>}
+        {!isMockAuth && liveMode && <Button onClick={() => { void verifyWithAuth0(); }} disabled={stepUpPending}>{stepUpPending ? 'Opening Auth0…' : 'Preview Auth0 step-up'}</Button>}
         <Button variant="quiet" onClick={() => { setDemoUntil(null); setStepUpOpen(false); setVerificationMessage(liveMode ? 'Demo-only preview shown. No backend action taken.' : 'Demo-only verified outcome shown. No MFA completed and no live alert was changed.'); }}>Preview verified outcome (demo)</Button>
       </div>
     </div></div>}
