@@ -1,5 +1,5 @@
 [Unit]
-Description=CypressWatch stop-work engine (only writer of alert state)
+Description=CypressWatch alert engine (lightning stop-work + flood rule; only writer of alert state)
 After=network-online.target
 Wants=network-online.target
 PartOf=cypresswatch.target
@@ -10,7 +10,7 @@ User=cypwatch
 Group=cypwatch
 WorkingDirectory=/opt/cypresswatch/backend/workers
 EnvironmentFile=/etc/cypresswatch.env
-ExecStart=/opt/cypresswatch/backend/.venv/bin/python -m cypress_workers.engines.lightning --loop 5 --glm-poll 60 --satellite 19
+ExecStart=/opt/cypresswatch/backend/.venv/bin/python -m cypress_workers.engines.lightning --loop 5 --glm-poll 60 --flood-poll 60 --satellite 19
 Restart=always
 RestartSec=5
 # keep state small; uvicorn/json errors already caught in the loop

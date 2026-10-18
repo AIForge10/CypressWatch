@@ -30,10 +30,20 @@ EVENTS_FILE = LIVE / "events.json"
 STRIKES_QUEUE_FILE = LIVE / "strikes_queue.json"
 ALERT_ACTIONS_FILE = LIVE / "alert_actions.json"
 LEDGER_ANCHORS_FILE = LIVE / "ledger_anchors.json"
+GAUGES_FILE = LIVE / "river_gauges.json"          # ingest/river_gauges.py (USGS gage height)
+FLOOD_ALERTS_FILE = LIVE / "flood_alerts.json"    # ingest/nws_alerts.py (NWS active flood alerts)
+FLOOD_QUEUE_FILE = LIVE / "flood_queue.json"      # demo heavy-rain night (API POST /api/demo/flood-rain)
 SITES_FILE = BACKEND / "data" / "sites" / "sites.json"
 
 STOP_WORK_MILES = 10.0
 STOP_WORK_SECONDS = 30 * 60  # rule: all-clear 30 minutes after the most recent strike
+
+# Flood rule (see engines/flood.py): river sites after a night of heavy rain.
+FLOOD_RAIN_INCHES = 3.0         # overnight rainfall that triggers the river-site alert
+GAUGE_PROXIMITY_MILES = 15.0    # a site near a reporting USGS stage gauge counts as "river site"
+GAUGE_RISE_FEET = 2.0           # stage rise in RISE_WINDOW that means the river is moving up
+RISE_WINDOW_HOURS = 3.0
+FLOOD_ALERT_HOURS = 6           # active flood alerts expire unless rain/gauges keep them alive
 
 load_dotenv(WORKERS_DIR / ".env")
 
