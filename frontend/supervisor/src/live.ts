@@ -50,6 +50,12 @@ export type SiteScore = {
   hazard_score: number | null; risk_level: BackendRisk | null; explanation: string | null; scored_at: string | null;
   model_version: string | null; top_factors: { feature: string; label: string; contribution: number }[];
 };
+export type SiteInsights = {
+  forecast_drift: { variable: string; valid_at: string; summary?: string; snapshots: { issued_at: string; value: number }[] } | null;
+  days_like_today: { summary?: string; event_rate?: number; base_rate?: number } | null;
+  storm_approach: { approaching?: boolean; strikes?: number; speed_mph?: number | null; nearest_miles?: number | null;
+    direction?: string | null; eta_minutes?: number | null; summary?: string; message?: string; watch_miles?: number } | null;
+};
 export type ReportConfirmRequest = { status: 'confirmed' | 'dismissed'; confirmed_hazard: HazardKey | null; confirmed_severity: Severity | null };
 
 async function call<T>(path: string, getAccessToken: AccessTokenGetter, init: RequestInit = {}): Promise<T> {
@@ -156,6 +162,9 @@ export const live = {
 
   siteScore: (siteId: string, getAccessToken: AccessTokenGetter) =>
     call<{ score: SiteScore | null }>(`/api/sites/${siteId}`, getAccessToken).then((detail) => detail.score),
+
+  insights: (siteId: string, getAccessToken: AccessTokenGetter) =>
+    call<SiteInsights>(`/api/sites/${siteId}/insights`, getAccessToken),
 
   reports: (getAccessToken: AccessTokenGetter, status: ReportStatus | 'all' = 'pending_review') =>
     call<{ server_time: string; reports: CrewReport[] }>(`/api/reports?status=${status}`, getAccessToken),
