@@ -8,6 +8,14 @@ import '@fontsource/open-sans/latin-400.css'
 import '@fontsource/open-sans/latin-600.css'
 import '@fontsource/open-sans/latin-700.css'
 import '@fontsource/open-sans/latin-800.css'
+// Choices in the Display panel (dyslexia-friendly fonts). They are saved for offline use with the rest of the app.
+import '@fontsource/atkinson-hyperlegible/latin-400.css'
+import '@fontsource/atkinson-hyperlegible/latin-700.css'
+import '@fontsource/lexend/latin-400.css'
+import '@fontsource/lexend/latin-600.css'
+import '@fontsource/lexend/latin-700.css'
+import '@fontsource/opendyslexic/latin-400.css'
+import '@fontsource/opendyslexic/latin-700.css'
 import './styles.css'
 
 async function main() {

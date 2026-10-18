@@ -3,6 +3,8 @@
  * data was last updated so old data is never mistaken for live data. The time
  * is kept in localStorage so it survives reloads and works with no signal.
  */
+import { agoText } from './i18n'
+import type { Lang } from './language'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 const KEY = 'cw:last-synced'
@@ -73,13 +75,9 @@ export function useFreshness(): FreshnessValue {
 }
 
 /** "just now", "12 min ago", "3 h ago", or null when never synced. */
-export function describeAge(at: number | null, now: number): string | null {
+export function describeAge(at: number | null, now: number, lang: Lang = 'en'): string | null {
   if (at == null) return null
-  const min = Math.max(0, Math.floor((now - at) / 60_000))
-  if (min < 1) return 'just now'
-  if (min < 60) return `${min} min ago`
-  const h = Math.floor(min / 60)
-  return h < 24 ? `${h} h ago` : `${Math.floor(h / 24)} d ago`
+  return agoText(Math.max(0, Math.floor((now - at) / 60_000)), lang)
 }
 
 export function isStale(at: number | null, now: number): boolean {

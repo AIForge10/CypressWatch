@@ -97,7 +97,7 @@
  * least 7:1 (WCAG AAA). It only changes tokens and a few rules, so every screen follows automatically.
  */
 html[data-theme="cypress"][data-contrast="high"] {
-  font-size: 112.5%;
+  --cw-sun: 1.125;
   --color-background: #ffffff;
   --color-foreground: #000000;
   --color-card: #ffffff;
@@ -138,3 +138,19 @@ html[data-contrast="high"] [class*="border-success/"], html[data-contrast="high"
 /* The street map goes back to full color and contrast. */
 html[data-contrast="high"] .cw-interactive-map .maplibregl-canvas { filter: none; }
 html[data-contrast="high"] ::placeholder { color: #3a3a3a; opacity: 1; }
+
+/*
+ * Display panel (header "Display" button): font, text size and spacing. See src/lib/reading.ts.
+ * Text size scales the whole page (everything is in rem); sunlight mode multiplies on top of it.
+ */
+html[data-theme="cypress"] { font-size: calc(100% * var(--cw-size, 1) * var(--cw-sun, 1)); }
+html[data-size="lg"] { --cw-size: 1.125; }
+html[data-size="xl"] { --cw-size: 1.25; }
+html[data-font="atkinson"] body { font-family: "Atkinson Hyperlegible", ui-sans-serif, system-ui, sans-serif; }
+html[data-font="lexend"] body { font-family: Lexend, ui-sans-serif, system-ui, sans-serif; }
+html[data-font="opendyslexic"] body { font-family: OpenDyslexic, ui-sans-serif, system-ui, sans-serif; }
+html[data-font="verdana"] body { font-family: Verdana, Tahoma, ui-sans-serif, system-ui, sans-serif; }
+/* Easier spacing: more room, no all-capital labels. The big countdown digits keep their own spacing. */
+html[data-spacing="wide"] body { word-spacing: 0.16em; }
+html[data-spacing="wide"] body *:not([data-testid="countdown-time"]) { letter-spacing: 0.02em !important; text-transform: none !important; }
+html[data-spacing="wide"] body :is(p, li, label, h1, h2, h3, dt, dd, td, th, textarea, select, button, a, summary) { line-height: 1.65 !important; }

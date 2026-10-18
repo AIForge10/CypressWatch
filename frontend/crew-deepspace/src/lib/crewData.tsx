@@ -21,6 +21,11 @@ import { bumpAttempts, clearQueueFor, enqueue, getPhoto, listQueue, removeItem, 
 
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true'
 
+/** Error codes the screens translate; any other error text comes from the server as is. */
+export const ERR_NO_SAVED = 'cw:no-saved-data'
+export const ERR_UNREACHABLE = 'cw:unreachable'
+export const ERR_NO_SITE = 'cw:no-site'
+
 // Real mode: every API call carries the signed-in person's DeepSpace login token.
 // (The backend must verify DeepSpace-issued tokens; see AUTH_NOTES.md.)
 setTokenGetter(async () => (await getAuthToken()) ?? '')
@@ -84,7 +89,7 @@ async function asAssignedSite<D extends { detail: SiteDetail }>(data: D, siteId:
 async function fetchSnapshot(sharedStart?: number, assignedSite?: string | null): Promise<Snapshot> {
   const me: Me = USE_MOCKS ? ({ ...(meCrewMock as Me), site_ids: assignedSite ? [assignedSite] : [] }) : await api.me()
   const siteId = me.site_ids[0]
-  if (!siteId) throw { error: 'forbidden', message: 'No site is assigned to you yet.', request_id: 'local' } satisfies ApiError
+  if (!siteId) throw { error: 'forbidden', message: ERR_NO_SITE, request_id: 'local' } satisfies ApiError
   const fetchId = USE_MOCKS ? SAMPLE_SITE : siteId
   const [detail, allAlerts, reportsRes] = await Promise.all([api.site(fetchId), api.alerts(), api.reports(fetchId)])
   const day = tomorrowAt(detail.site.timezone)
@@ -233,7 +238,7 @@ export function CrewDataProvider({ children, enabled, identity, assignedSite = n
     if (!navigator.onLine) {
       if (!snapRef.current) {
         setStatus('error')
-        setError('You have no signal and nothing is saved on this phone yet. Connect once so the app can save your site.')
+        setError(ERR_NO_SAVED)
       }
       return
     }
@@ -248,7 +253,7 @@ export function CrewDataProvider({ children, enabled, identity, assignedSite = n
       setStatus('ready')
       setError(null)
     } catch (e) {
-      const msg = (e as Partial<ApiError>)?.message ?? 'Could not reach the server.'
+      const msg = (e as Partial<ApiError>)?.message ?? ERR_UNREACHABLE
       setError(msg)
       setStatus(snapRef.current ? 'ready' : 'error')
     }
