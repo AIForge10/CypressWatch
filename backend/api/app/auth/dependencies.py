@@ -181,9 +181,15 @@ def _authenticate_deepspace(token: str) -> AuthenticatedUser:
             raise TokenValidationError("This sign-in token was issued for a different app.")
     email = claims.get("email")
     sites = crew_assignments().get(email.strip().lower()) if isinstance(email, str) else None
+    if not sites and settings.crew_demo_sites.strip() and isinstance(email, str):
+        # Demo mode (e.g. judges, whose emails are unknown in advance): crew access to the demo site(s) only.
+        sites = frozenset(s.strip() for s in settings.crew_demo_sites.replace("|", ",").split(",") if s.strip())
+        print(f"crew demo access: {email} -> {sorted(sites)}", flush=True)
     if not sites:
-        raise TokenValidationError("Signed in, but this account is not on the CypressWatch crew list. "
-                                   "Ask a supervisor to add your email.", status.HTTP_403_FORBIDDEN)
+        shown = email if isinstance(email, str) else "an account with no email"
+        print(f"crew sign-in refused: {shown} is not on CREW_ASSIGNMENTS", flush=True)  # lets an admin add them
+        raise TokenValidationError(f"Signed in as {shown}, but this account is not on the CypressWatch crew list. "
+                                   "Ask a supervisor to add this email.", status.HTTP_403_FORBIDDEN)
     name = claims.get("name") or email
     return AuthenticatedUser(user_id=f"deepspace|{claims['sub']}", name=name if isinstance(name, str) else email,
                              email=email, role="crew", site_ids=sites, claims=claims)

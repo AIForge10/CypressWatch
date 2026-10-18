@@ -2,12 +2,14 @@
 # Deploy the CypressWatch backend (API + GLM + engine + scheduler + Tiger sync) to a Vultr VPS, behind HTTPS.
 # macOS / Linux counterpart of deploy.ps1. See deploy/README.md.
 #
-#   deploy/deploy.sh <server-ip> [--domain api.example.com] [--key ~/.ssh/id_ed25519] [--push-env] [--wallet]
+#   deploy/deploy.sh <server-ip> [--domain api.example.com] [--key ~/.ssh/id_ed25519] [--push-env] [--wallet] [--frontend]
 #
 #   --domain    HTTPS name for the API. Default: <ip-with-dashes>.sslip.io (resolves to the IP; no DNS setup).
 #   --push-env  copy values from your local backend/api/.env, backend/workers/.env and backend/ai/.env into the
 #               server's /etc/cypresswatch.env, for keys that are still empty there (never prints them).
 #   --wallet    copy backend/ledger/.keys/devnet-keypair.json so the server anchors with the same Solana wallet.
+#   --frontend  also build frontend/supervisor against https://<domain> and serve it at https://<domain>/.
+#               Auth0 must list https://<domain> as an allowed callback, logout URL and web origin.
 #
 # Safe to re-run: live data, the ledger database, the wallet and crew photos on the server are never touched.
 set -euo pipefail
@@ -15,7 +17,7 @@ set -euo pipefail
 usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
 [[ $# -ge 1 && $1 != -* ]] || usage
 HOST_IP=$1; shift
-DOMAIN="${HOST_IP//./-}.sslip.io"; SSH_KEY="$HOME/.ssh/id_ed25519"; SSH_USER=root; PUSH_ENV=0; WALLET=0
+DOMAIN="${HOST_IP//./-}.sslip.io"; SSH_KEY="$HOME/.ssh/id_ed25519"; SSH_USER=root; PUSH_ENV=0; WALLET=0; FRONTEND=0
 while [[ $# -gt 0 ]]; do
   case $1 in
     --domain) DOMAIN=$2; shift 2 ;;
@@ -23,6 +25,7 @@ while [[ $# -gt 0 ]]; do
     --user) SSH_USER=$2; shift 2 ;;
     --push-env) PUSH_ENV=1; shift ;;
     --wallet) WALLET=1; shift ;;
+    --frontend) FRONTEND=1; shift ;;
     *) usage ;;
   esac
 done
@@ -57,7 +60,7 @@ EXCLUDES=(--exclude='.env' --exclude='__pycache__' --exclude='*.pyc' --exclude='
           --exclude='backend/ml/data' --exclude='backend/ml/notebooks')
 for k in "${KEEP[@]}"; do EXCLUDES+=(--exclude="backend/$k"); done
 # macOS tar would add Mac-only metadata that Linux tar warns about on every file.
-[[ $(uname) == Darwin ]] && EXCLUDES+=(--no-mac-metadata --no-xattrs)
+[[ $(uname) == Darwin ]] && EXCLUDES+=(--no-mac-metadata --no-xattrs --no-fflags)
 COPYFILE_DISABLE=1 tar -czf "$STAGE/backend.tgz" -C "$ROOT" "${EXCLUDES[@]}" backend
 echo "   $(du -h "$STAGE/backend.tgz" | cut -f1) -> $HOST_IP"
 
@@ -135,6 +138,18 @@ if [[ $WALLET == 1 ]]; then
   echo "   ledger wallet copied"
 fi
 
+if [[ $FRONTEND == 1 ]]; then
+  step "   building and uploading the supervisor dashboard"
+  (cd "$ROOT/frontend/supervisor" && rm -rf dist && VITE_API_URL="https://$DOMAIN" npm run build --silent >/dev/null)
+  grep -q "$DOMAIN" "$ROOT"/frontend/supervisor/dist/assets/*.js || { echo "build does not point at https://$DOMAIN"; exit 1; }
+  COPYFILE_DISABLE=1 tar -czf "$STAGE/dashboard.tgz" -C "$ROOT/frontend/supervisor/dist" .
+  scpx "$STAGE/dashboard.tgz" "$SSH_USER@$HOST_IP:/tmp/dashboard.tgz"
+  sshx "set -e; rm -rf /var/www/cypresswatch.new && mkdir -p /var/www/cypresswatch.new
+        tar -xzf /tmp/dashboard.tgz -C /var/www/cypresswatch.new 2>/dev/null && rm /tmp/dashboard.tgz
+        rm -rf /var/www/cypresswatch && mv /var/www/cypresswatch.new /var/www/cypresswatch && chmod -R a+rX /var/www/cypresswatch"
+  echo "   dashboard: https://$DOMAIN"
+fi
+
 step "5. starting"
 sshx "set -e; systemctl enable -q cypresswatch.target cypresswatch-api cypresswatch-glm cypresswatch-engine cypresswatch-scheduler cypresswatch-sync caddy
       systemctl restart cypresswatch.target && systemctl reload-or-restart caddy
@@ -147,7 +162,7 @@ for i in $(seq 1 20); do
     cat <<EOF
 
 Next:
-  - Supervisor app: VITE_API_URL=https://$DOMAIN in frontend/supervisor/.env.local
+  - Supervisor app: https://$DOMAIN (with --frontend), or VITE_API_URL=https://$DOMAIN for local development
   - Crew app (M2):  VITE_API_URL=https://$DOMAIN and VITE_USE_MOCKS=false
   - Settings:       ssh $SSH_USER@$HOST_IP, edit /etc/cypresswatch.env, then: systemctl restart cypresswatch.target
   - Logs:           ssh $SSH_USER@$HOST_IP journalctl -u cypresswatch-api -f

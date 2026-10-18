@@ -218,6 +218,11 @@
 .cw-access-denied-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .cw-access-denied-note { font-size: 12px; }
 .cw-report-list { display: grid; gap: 16px; }
+/* Same 20px side padding as .cw-section-heading, so rows line up with the card title. */
+.cw-verify-list { padding: 0 20px 6px; }
+.cw-verify-list > .cw-factor { gap: 16px; }
+.cw-verify-list > .cw-factor > div { min-width: 0; overflow-wrap: anywhere; }
+.cw-verify-list > .cw-muted { padding: 4px 0 16px; margin: 0; }
 .cw-ai-note { display: grid; gap: 6px; margin: 8px 0 18px; padding: 12px 14px; border-left: 3px solid var(--cw-brand); border-radius: var(--cw-radius-sm); background: var(--cw-subtle); }
 .cw-ai-note p { margin: 0; }
 .cw-ai-note-text { color: var(--cw-ink); line-height: 1.55; }

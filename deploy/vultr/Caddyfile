@@ -1,6 +1,19 @@
-# HTTPS in front of the API. Caddy gets and renews a Let's Encrypt certificate on its own.
-# CW_DOMAIN comes from /etc/default/caddy (deploy.sh sets it to <ip-with-dashes>.sslip.io or your own domain).
+# HTTPS for the API and the supervisor dashboard on one address. Caddy gets and renews a Let's Encrypt
+# certificate on its own. deploy.sh replaces {$CW_DOMAIN} with <ip-with-dashes>.sslip.io or your own domain.
 {$CW_DOMAIN} {
 	encode gzip
-	reverse_proxy 127.0.0.1:8000
+
+	# Backend: REST API, live feed (/api/ws), health and API docs.
+	@api path /api/* /health /docs /docs/* /openapi.json /redoc
+	handle @api {
+		reverse_proxy 127.0.0.1:8000
+	}
+
+	# Supervisor dashboard (frontend/supervisor build, uploaded by deploy.sh --frontend).
+	# Unknown paths fall back to index.html so links like /app/supervisor/reports work on reload.
+	handle {
+		root * /var/www/cypresswatch
+		try_files {path} /index.html
+		file_server
+	}
 }

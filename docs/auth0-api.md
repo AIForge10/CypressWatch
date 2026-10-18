@@ -68,8 +68,9 @@ Roles belong to each **Auth0 user**, not to the app, so the same code behaves di
 
 ### Dashboard checklist (M1)
 
-- [ ] Applications → CypressWatch supervisor → Allowed Callback URLs, Logout URLs and Web Origins include
-      `http://localhost:5173` and the deployed URL.
+- [ ] Applications → CypressWatch supervisor → **Allowed Callback URLs**, **Allowed Logout URLs** and
+      **Allowed Web Origins** each include `http://localhost:5173` and the live dashboard
+      `https://64-177-55-82.sslip.io` (comma-separated). Without it, sign-in there fails with "Callback URL mismatch".
 - [ ] APIs → identifier exactly `https://api.cypresswatch` (no trailing slash).
 - [ ] Post-Login Action deployed with `TEAM_SUPERVISOR_EMAILS` set, and in the post-login flow.
 - [ ] Authentication → Database → Username-Password-Authentication → **Disable Sign Ups**, so only invited

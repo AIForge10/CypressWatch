@@ -31,7 +31,8 @@ The crew app signs in with DeepSpace and sends `Authorization: Bearer <DeepSpace
 (ES256, issuer `https://auth.deep.space/api/auth`, public key from `https://auth.deep.space/api/auth/jwks`) and
 treats the caller as role **crew** on the sites listed for their email in `CREW_ASSIGNMENTS`
 (`a@x.com:site_56407|site_621,b@y.com:site_617` in `backend/api/.env`). DeepSpace signs every app's users with
-one platform key, so a valid token only proves the email: **anyone not on the crew list gets `403`**, and a
+one platform key, so a valid token only proves the email: **anyone not on the crew list gets `403`** (or, when
+`CREW_DEMO_SITES` is set for a demo, crew access to those sites only), and a
 DeepSpace token can never be a supervisor. Once a real token shows an app-specific `azp`/`aud`, set
 `DEEPSPACE_AUTHORIZED_PARTIES` so other apps' users are rejected outright. The live feed (`/api/ws`) accepts the
 same token.
