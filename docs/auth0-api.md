@@ -66,7 +66,7 @@ Roles belong to each **Auth0 user**, not to the app, so the same code behaves di
 - The email is on the allowlist but not verified yet.
 - The change was made while signed in: sign out and back in.
 
-### Dashboard checklist (M1)
+### Dashboard checklist
 
 - [ ] Applications → CypressWatch supervisor → **Allowed Callback URLs**, **Allowed Logout URLs** and
       **Allowed Web Origins** each include `http://localhost:5173` and the live dashboard

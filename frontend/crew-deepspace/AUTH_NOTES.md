@@ -27,7 +27,7 @@ and the token getter in `src/lib/crewData.tsx`.
   sees or uploads the first person's items.
 
 ## Things the team must decide / build
-1. **Backend (M4) must verify the DeepSpace token** on every request. The app sends
+1. **Backend must verify the DeepSpace token** on every request. The app sends
    `Authorization: Bearer <DeepSpace JWT>` (from `getAuthToken()`). The contract assumed Auth0 tokens.
 2. **Roles don't match.** DeepSpace has viewer / member / admin. The plan has
    crew / supervisor / project_owner. Needs a mapping table on the backend.

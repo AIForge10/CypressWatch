@@ -9,7 +9,7 @@ Reads:  backend/workers/data/live/weather_latest.json   (from the live weather w
         backend/ml/models/hazard_index_v1.txt + .meta.json (from train.py)
 Writes: backend/workers/data/live/scores_latest.json     (scores for today and tomorrow)
 
-From Python (M4):
+From Python:
     from cypress_ml.score import score_sites
     scores = score_sites(weather_snapshot, sites, days=(0, 1), stop_work={"site_6043"})
 Each result matches the `score` block in contracts/mocks/site_detail.json, plus site_id and date.

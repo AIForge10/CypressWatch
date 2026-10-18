@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "Shared components + color tokens for supervisor and crew apps (M1 + M2)",
+  "description": "Shared components + color tokens for supervisor and crew apps",
   "exports": {
     ".": "./src/index.tsx",
     "./tokens.css": "./src/tokens.css"

@@ -1,31 +1,8 @@
-# Who owns which folder. Replace @M1 … @M4 with real GitHub usernames.
-# GitHub auto-requests the owner's review on any PR that touches their folder.
-
-# ───────────── FRONTEND ─────────────
-# M1 — Supervisor (Easy On The Eyes, Auth0, Domain)
-/frontend/supervisor/                        @M1
-# M2 — Crew (DeepSpace, Hardware)
-/frontend/crew-deepspace/                    @M2
-# Shared by both frontend members
-/frontend/packages/ui/                       @M1 @M2
-/frontend/package.json                       @M1 @M2
-/frontend/packages/shared/                   @M4 @M1 @M2
-
-# ───────────── BACKEND ─────────────
-# M4 — Backend / Platform (Sperry core, Tiger Data, Vultr): default owner of backend/
-/backend/                                    @M4
-# M3 — AI/ML + Solana
-/backend/ml/                                 @M3
-/backend/ai/                                 @M3
-/backend/ledger/                             @M3
-/backend/api/app/routers/scores.py           @M3
-/backend/api/app/routers/briefings.py        @M3
-/backend/api/app/routers/ledger.py           @M3
-# Frontend members' small backend pieces
-/backend/api/app/auth/                       @M1
-/backend/api/app/routers/reports.py          @M2
-
-# ───────────── OTHER ─────────────
-/hardware/                                   @M2
-/docs/api-contract.md                        @M4
-/README.md                                   @M1 @M2 @M3 @M4
+# Folder areas (no automatic review requests). Add real GitHub usernames after a path to enable them.
+#
+# Frontend: supervisor dashboard      /frontend/supervisor/
+# Frontend: crew app                  /frontend/crew-deepspace/
+# Shared UI and API types             /frontend/packages/
+# Backend platform                    /backend/api/, /backend/workers/, /backend/db/, /deploy/
+# AI/ML and Solana                    /backend/ml/, /backend/ai/, /backend/ledger/
+# Site Beacon hardware                /hardware/

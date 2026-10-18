@@ -1,4 +1,4 @@
-# AI services (M3)
+# AI services
 
 Gemini's three jobs. Gemini only *explains*; it never starts or ends a stop-work.
 

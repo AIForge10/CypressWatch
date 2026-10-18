@@ -1,4 +1,4 @@
-// Live backend service for the supervisor app. Talks to the CypressWatch API (M4):
+// Live backend service for the supervisor app. Talks to the CypressWatch API:
 // /api/sites/summary, /api/sites/{id}, /api/sites/{id}/briefing, /api/alerts, /api/demo/*, /api/reports,
 // /api/ledger/*, /api/ws.
 // Falls back to the bundled demo data whenever the backend is unreachable, so the

@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "Shared TypeScript types mirroring the API contract (docs/api-contract.md). Owned by M4.",
+  "description": "Shared TypeScript types mirroring the API contract (docs/api-contract.md). Owned by Platform.",
   "exports": {
     ".": "./src/index.ts"
   }

@@ -1,4 +1,4 @@
-"""6 PM next-day briefings (EN/ES) (owner: M3).
+"""6 PM next-day briefings (EN/ES).
 
 GET /api/sites/{site_id}/briefing?date=YYYY-MM-DD&lang=en -> Briefing (contracts/mocks/briefing.json)
     date omitted -> the latest briefing for the site.

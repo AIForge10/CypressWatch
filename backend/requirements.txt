@@ -1,9 +1,9 @@
 # Installs every backend area at once (run from backend/). Each member edits ONLY
 # their own area's requirements.txt, which keeps merge conflicts out of this file.
--r api/requirements.txt          # M4 (+ M1 auth middleware, M2 upload endpoint)
--r workers/requirements.txt      # M4
--r ai/requirements.txt           # M3
--r ml/requirements.txt           # M3
--r ledger/requirements.txt       # M3
--r ../hardware/site-beacon/bridge/requirements.txt  # M2 (optional)
+-r api/requirements.txt
+-r workers/requirements.txt
+-r ai/requirements.txt
+-r ml/requirements.txt
+-r ledger/requirements.txt
+-r ../hardware/site-beacon/bridge/requirements.txt
 -r requirements-dev.txt          # everyone

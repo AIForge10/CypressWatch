@@ -1,4 +1,4 @@
-"""Alerts: read stop-work state, acknowledge, override (owner: M4 per docs/api-contract.md).
+"""Alerts: read stop-work state, acknowledge, override.
 
 The engine (workers/cypress_workers/engines/lightning.py) is the only writer of alert state;
 this router *queues* actions (backend/workers/data/live/alert_actions.json) that the engine

@@ -1,4 +1,4 @@
-# Solana Safety Ledger (M3, after hour 16)
+# Solana Safety Ledger
 
 - `merkle/`: Python hashing + hourly per-site Merkle roots + proofs.
 - `program/`: Anchor program `anchor_root(site_id, period, root, count)` on devnet.

@@ -1,4 +1,4 @@
-"""DeepSpace realtime sync (owner: M2; wired by M4): WebSocket push of live events.
+"""DeepSpace realtime sync: WebSocket push of live events.
 
 `/api/ws` - authenticated subscribers receive only events for their assigned sites.
 The browser sends its Auth0 access token as the first WebSocket message, rather

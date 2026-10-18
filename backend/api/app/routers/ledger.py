@@ -1,4 +1,4 @@
-"""Solana Safety Ledger: record verification (owner: M3). GET returns the ledger_verify.json shape."""
+"""Solana Safety Ledger: record verification. GET returns the ledger_verify.json shape."""
 import sqlite3
 import sys
 from pathlib import Path

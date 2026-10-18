@@ -1,6 +1,6 @@
 """Crew hazard reports: photo upload -> Gemini triage -> supervisor confirm -> Solana ledger.
 
-Backend: M3. Crew upload screen: M2. Supervisor confirm screen: M1.
+Backend: AI/ML. Crew upload screen: Crew. Supervisor confirm screen: Supervisor.
 
 POST  /api/reports                   multipart: photo file + data (report_request.json) -> Report (201)
                                      same client_id again (offline replay) -> 409 + the existing report

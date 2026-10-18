@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-shot setup after cloning. Run from the repo root:
 #   ./scripts/setup.sh frontend   # supervisor + shared packages (needs Node only)
-#   ./scripts/setup.sh backend    # M3, M4  (run `conda activate cypresswatch` first)
+#   ./scripts/setup.sh backend
 #   ./scripts/setup.sh            # both
 set -euo pipefail
 cd "$(dirname "$0")/.."

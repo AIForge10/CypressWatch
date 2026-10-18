@@ -1,6 +1,6 @@
 """API package. Adds the workers dir to sys.path first, so the routers can share
 cypress_workers.common (the JSON state under backend/workers/data/live) with plain
-`cd api && uvicorn app.main:app`. Auth (M1) adds the backend/ai and backend/workers paths as needed.
+`cd api && uvicorn app.main:app`. Auth adds the backend/ai and backend/workers paths as needed.
 """
 import sys
 from pathlib import Path

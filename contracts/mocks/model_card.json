@@ -41,7 +41,7 @@
       "baseline_name": "Heat index only"
     }
   ],
-  "calibration_note": "PLACEHOLDER: M3 fills in after training.",
+  "calibration_note": "PLACEHOLDER: AI/ML fills in after training.",
   "top_global_features": [
     {
       "feature": "strikes_within_10mi_1h",
@@ -53,6 +53,6 @@
     }
   ],
   "limitations": [
-    "PLACEHOLDER: M3 fills in. All numbers in this file are zeros until the model is trained."
+    "PLACEHOLDER: AI/ML fills in. All numbers in this file are zeros until the model is trained."
   ]
 }

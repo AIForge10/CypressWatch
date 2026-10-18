@@ -1,4 +1,4 @@
-"""Shared helpers for the M3 routers (sites, scores, briefings).
+"""Shared helpers for the AI/ML routers (sites, scores, briefings).
 
 Makes backend/db, backend/ledger and backend/ai importable, and returns errors in the contract's ApiError shape:
     {"error": "not_found", "message": "...", "request_id": "..."}

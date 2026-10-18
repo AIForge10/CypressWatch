@@ -35,8 +35,8 @@ if [[ "$PART" == backend || "$PART" == all ]]; then
     docker ps --format '{{.Names}}' | grep -q '^cypresswatch-db$' && ok "cypresswatch-db container up" \
       || opt "db not running (cd backend && docker compose up -d)"
   else opt "docker not running (only needed for the local DB)"; fi
-  command -v solana >/dev/null && ok "solana $(solana --version | cut -d' ' -f2)  [M3]" || opt "solana CLI  [M3 only]"
-  command -v anchor >/dev/null && ok "$(anchor --version)  [M3]" || opt "anchor CLI  [M3 only; new terminal or: source ~/.cargo/env]"
+  command -v solana >/dev/null && ok "solana $(solana --version | cut -d' ' -f2) " || opt "solana CLI "
+  command -v anchor >/dev/null && ok "$(anchor --version) " || opt "anchor CLI "
   envf backend/api/.env
   envf backend/workers/.env
   envf backend/ai/.env

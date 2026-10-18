@@ -4,7 +4,7 @@ Usage (from the repo root, conda env active), after score.py has run:
     python backend/ai/cypress_ai/explain/explainer.py            # today's scores
     python backend/ai/cypress_ai/explain/explainer.py --limit 3  # cheap test on 3 sites
 
-From Python (M4):
+From Python:
     from cypress_ai.explain.explainer import explain_scores
     scores = explain_scores(scores, sites)   # adds "explanation" and "explanation_source" to each score
 

@@ -1,4 +1,4 @@
-"""Vultr scheduler (M4): drives the pipeline on a clock, per docs/architecture.md.
+"""Vultr scheduler: drives the pipeline on a clock, per docs/architecture.md.
 
 Heavy chain, every WEATHER_INTERVAL seconds:
     weather_live.run() -> score_sites(stop-work set) -> explain_scores() -> save JSON
@@ -44,7 +44,7 @@ def active_stop_works() -> set[str]:
 
 
 def run_weather_and_scores() -> list[dict]:
-    """The full M3 chain. Returns the score_updated events it appended."""
+    """The full AI/ML chain. Returns the score_updated events it appended."""
     from cypress_ml.score import score_sites
     from cypress_ai.explain.explainer import explain_scores
 

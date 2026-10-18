@@ -1,4 +1,4 @@
-"""Demo injection: simulate strike + heavy-rain night (owner: M4). Feeds the REAL engines.
+"""Demo injection: simulate strike + heavy-rain night. Feeds the REAL engines.
 
 POST /api/demo/strike with DemoStrikeRequest {site_id, distance_miles?, bearing_deg?} puts a
 simulated strike (distance_miles defaults to 4.2, always < 10, contract rule) into the strikes

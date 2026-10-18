@@ -33,10 +33,10 @@ What to try:
 
 | You are | Go to | Setup |
 |---|---|---|
-| **M1** Frontend: Supervisor | [`frontend/`](frontend/README.md) → `frontend/supervisor/` | `./scripts/setup.sh frontend` |
-| **M2** Frontend: Crew | [`frontend/crew-deepspace/`](frontend/crew-deepspace/START_HERE.md) | Follow the standalone crew setup guide |
-| **M3** AI/ML + Solana | [`backend/`](backend/README.md) → `backend/ml/`, `backend/ai/`, `backend/ledger/` | `./scripts/setup.sh backend` |
-| **M4** Backend / Platform | [`backend/`](backend/README.md) → `backend/api/`, `backend/workers/`, `backend/db/` | `./scripts/setup.sh backend` |
+| Frontend: Supervisor | [`frontend/`](frontend/README.md) → `frontend/supervisor/` | `./scripts/setup.sh frontend` |
+| Frontend: Crew | [`frontend/crew-deepspace/`](frontend/crew-deepspace/START_HERE.md) | Follow the standalone crew setup guide |
+| AI/ML + Solana | [`backend/`](backend/README.md) → `backend/ml/`, `backend/ai/`, `backend/ledger/` | `./scripts/setup.sh backend` |
+| Backend / Platform | [`backend/`](backend/README.md) → `backend/api/`, `backend/workers/`, `backend/db/` | `./scripts/setup.sh backend` |
 
 Frontend members need **Node**; the crew app also needs a DeepSpace account. Backend members need **conda + Docker**. Each half's README has the full
 install guide, run commands, and troubleshooting.
@@ -47,18 +47,18 @@ Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before your first PR (branches, owners
 
 ```
 CypressWatch/
-├── frontend/              M1 + M2   React apps (separate installs)
-│   ├── supervisor/        M1   supervisor dashboard          → localhost:5173
-│   ├── crew-deepspace/    M2   offline-first crew PWA        → DeepSpace dev URL
+├── frontend/   React apps (separate installs)
+│   ├── supervisor/   supervisor dashboard          → localhost:5173
+│   ├── crew-deepspace/   offline-first crew PWA        → DeepSpace dev URL
 │   └── packages/          ui (shared components), shared (API types)
-├── backend/               M3 + M4   Python 3.11
-│   ├── api/               M4   FastAPI (one router file per owner)
-│   ├── workers/           M4   ingestion, lightning/flood engines, 6 PM scheduler
-│   ├── db/  data/         M4   TimescaleDB migrations/seeds, EIA-860M sites
-│   ├── ml/                M3   hazard-index model
-│   ├── ai/                M3   Gemini briefing, photo triage, explanations
-│   └── ledger/            M3   Solana Safety Ledger
-├── hardware/site-beacon/  M2   optional Arduino beacon (decided at hour 16)
+├── backend/   Python 3.11
+│   ├── api/   FastAPI (one router file per owner)
+│   ├── workers/   ingestion, lightning/flood engines, 6 PM scheduler
+│   ├── db/  data/   TimescaleDB migrations/seeds, EIA-860M sites
+│   ├── ml/   hazard-index model
+│   ├── ai/   Gemini briefing, photo triage, explanations
+│   └── ledger/   Solana Safety Ledger
+├── hardware/site-beacon/   optional Arduino beacon (decided at hour 16)
 ├── docs/                       plan.pdf, architecture.md, api-contract.md ← frontend ↔ backend agreement
 └── scripts/                    setup.sh, check-env.sh  (take `frontend` / `backend` / nothing = both)
 ```
@@ -68,15 +68,15 @@ CypressWatch/
 ```bash
 git clone https://github.com/AIForge10/CypressWatch && cd CypressWatch
 
-# Supervisor frontend (M1)
+# Supervisor frontend
 nvm install 20 && nvm use 20
 ./scripts/setup.sh frontend
 cd frontend && npm run dev:supervisor
 
-# Crew frontend (M2): separate terminal, Node 22.15+ and npm 11.6+
+# Crew frontend: separate terminal, Node 22.15+ and npm 11.6+
 # Follow frontend/crew-deepspace/START_HERE.md for DeepSpace login and dev start.
 
-# Backend (M3, M4)
+# Backend
 cd ..
 cd backend && conda env create -f environment.yml && conda activate cypresswatch && cd ..
 ./scripts/setup.sh backend
@@ -85,17 +85,17 @@ cd backend/api && uvicorn app.main:app --reload        # http://localhost:8000/d
 
 Then fill in your `.env` / `.env.local` files with keys from the team (never commit them).
 
-Account sign-ups (hour 0–2): **Auth0** (M1), **DeepSpace** (M2), **Gemini API key** at
-https://aistudio.google.com (M3), **Tiger Data** + **Vultr** + **NASA FIRMS key** (M4).
+Account sign-ups (hour 0–2): **Auth0**, **DeepSpace**, **Gemini API key** at
+https://aistudio.google.com, **Tiger Data** + **Vultr** + **NASA FIRMS key**.
 
 ## Team
 
-| | Role | Sponsors owned |
-|---|---|---|
-| M1 | Frontend: Supervisor | Easy On The Eyes, Auth0, Domain |
-| M2 | Frontend: Crew | DeepSpace, Hardware |
-| M3 | AI/ML Lead | AI/ML, Gemini, Solana |
-| M4 | Backend / Platform Lead | Sperry core, Tiger Data, Vultr |
+| Area | Sponsor tech |
+|---|---|
+| Frontend: Supervisor | Easy On The Eyes, Auth0, Domain |
+| Frontend: Crew | DeepSpace, Hardware |
+| AI/ML Lead | AI/ML, Gemini, Solana |
+| Backend / Platform Lead | Sperry core, Tiger Data, Vultr |
 
 CypressWatch is decision support for supervisors. It does not guarantee safety.
 

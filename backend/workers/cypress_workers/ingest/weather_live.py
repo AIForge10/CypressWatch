@@ -11,7 +11,7 @@ forecast API (no key) for all sites in a few batched requests, and saves:
 The daily variables, units and local-time dates match the training data downloaded by
 backend/ml/download_weather.py, so the ML model scores live data in the same format it learned from.
 It also includes the past 30 days, so rolling rain and days-since-rain features can be computed.
-M4 schedules this every 15 minutes and later writes the same records into Tiger Data.
+Platform schedules this every 15 minutes and later writes the same records into Tiger Data.
 """
 import argparse
 import json

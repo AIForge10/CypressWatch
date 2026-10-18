@@ -1,4 +1,4 @@
-"""Keep Tiger Data fresh (owner: M3).
+"""Keep Tiger Data fresh.
 
 Every N minutes: push the live files (scores, weather, strikes) into Tiger,
 then refresh "days like today". Runs next to the API, locally or on Vultr.
