@@ -58,3 +58,4 @@ backend/ledger/.keys/devnet-keypair.json
 # --- Arduino ---
 hardware/site-beacon/firmware/build/
 * 2.*
+backend/data/reports/
