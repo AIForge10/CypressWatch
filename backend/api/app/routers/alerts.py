@@ -12,31 +12,24 @@ frontend must send X-MFA-Verified: true, or we return 401 step_up_required per c
 """
 from fastapi import APIRouter, Header, HTTPException
 from pathlib import Path
+import sqlite3
 import sys
 
-from cypress_workers.common import (ALERT_ACTIONS_FILE, LEDGER_ANCHORS_FILE, STOP_WORK_FILE, now_iso,
-                                    read_json, write_json)
+from cypress_workers.common import ALERT_ACTIONS_FILE, STOP_WORK_FILE, now_iso, read_json, write_json
 
 router = APIRouter(prefix="/api/alerts", tags=["alerts"])
 
-
-def _ledger_src() -> Path:  # ledger/merkle for record lookup
-    here = Path(__file__).resolve()
-    backend = here.parents[3]
-    src = backend / "ledger"
-    if str(src) not in sys.path:
-        sys.path.insert(0, str(src))
-    return src
+LEDGER_DB = Path(__file__).resolve().parents[3] / "ledger" / "data" / "ledger.db"
 
 
 def _ledger_record_for(alert_id: str) -> str | None:
-    src = _ledger_src()
-    from merkle import verify_record  # noqa: F401  (import ok; lookups use the file)
-    anchors = read_json(LEDGER_ANCHORS_FILE, {})
-    for record_id, rec in anchors.get("records", {}).items():
-        if rec.get("payload", {}).get("alert_id") == alert_id:
-            return record_id
-    return None
+    """The ledger_record_id of the first stored record that mentions this alert (rec_..)."""
+    if not LEDGER_DB.exists():
+        return None
+    with sqlite3.connect(LEDGER_DB) as db:
+        hit = db.execute("SELECT record_id FROM records WHERE payload LIKE ? ORDER BY created_at LIMIT 1",
+                         (f'%"alert_id":"{alert_id}"%',)).fetchone()
+    return hit[0] if hit else None
 
 
 def _identity(user_id: str | None, name: str | None) -> dict:

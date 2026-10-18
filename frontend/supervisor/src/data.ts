@@ -17,6 +17,8 @@ export type StopWorkEvent = {
   allClearAt: string;
   status: 'active' | 'expired';
   lastStrikeAt: string;
+  acknowledged?: boolean;
+  alertId?: string;
 };
 
 export type Site = {
@@ -36,6 +38,12 @@ export type Site = {
 
 export type ForecastPoint = { time: string; label: string; score: number; condition: string };
 export type CrewReport = { id: string; author: string; hazardType: HazardType; severity: RiskLevel; description: string; createdAt: string; status: 'Synced' | 'Pending sync' };
+export type LedgerVerify = {
+  record_id: string; record_type: string; site_id: string; verified: boolean; computed_hash: string;
+  merkle_root_onchain: string; merkle_root_from_proof: string; period_start: string; period_end: string;
+  records_in_root: number; network: string; transaction_signature: string; explorer_url: string;
+  checked_at: string; message: string;
+};
 export type Briefing = { summary: string; recommendedWorkWindow: string; generatedAt: string };
 
 export const siteDetailData: Record<string, { forecast: ForecastPoint[]; briefing: Briefing; reports: CrewReport[] }> = {

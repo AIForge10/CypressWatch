@@ -200,7 +200,8 @@ def main() -> None:
     ap.add_argument("--loop", type=float, default=5.0, help="seconds between ticks")
     ap.add_argument("--glm-poll", type=float, default=60.0,
                     help="seconds between GOES GLM ingest passes (0 = never; scheduler owns it instead)")
-    ap.add_argument("--satellite", default="16", choices=["16", "18"])
+    ap.add_argument("--satellite", default="19", choices=["16", "18", "19"],
+                    help="GOES-East is GOES-19; 16/18 kept for fallback/archive work")
     ap.add_argument("--once", action="store_true", help="one tick and exit")
     args = ap.parse_args()
 
