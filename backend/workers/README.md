@@ -6,30 +6,48 @@ Ingestion pollers, the deterministic alert engines, and the 6 PM scheduler. Runs
 - `cypress_workers/engines/`: lightning 10-mile countdown, overnight flood rule
 - `cypress_workers/scheduler/`: 6 PM local-time trigger per site time zone
 
-## Running live (three separate processes)
+## Running live (two separate processes)
+
+Use the Python environment from `backend/README.md`. Run each command from
+`backend/workers`. The alert engine polls NOAA GOES-19 lightning, USGS gauges,
+and NWS flood alerts itself; the scheduler refreshes Open-Meteo weather and
+hazard scores every 15 minutes. Live snapshots are written under the existing
+ignored `data/live/` directory.
 
 ```bash
-# 1. Live GLM ingest (GOES-19 GLM-L2-LCFA; refreshes lightning_latest.json every pass)
-python -m cypress_workers.ingest.lightning_glm --loop 60   # poll every 60 s; omit --loop for one shot
+# Terminal 1: alerts and all hazard-source pollers.
+python -m cypress_workers.engines.lightning --loop 5 --glm-poll 60 --flood-poll 60 --gauge-poll 900 --nws-poll 300 --satellite 19
 
-# 2. The alert engine: only writer of stop_work.json + the alert/ack/override event stream.
-#    (--loop 5 = tick every 5 s; it also polls GLM itself every --glm-poll seconds and runs
-#     the flood rule every --flood-poll seconds, which polls USGS gauges + NWS alerts itself.)
-python -m cypress_workers.engines.lightning --loop 5 --glm-poll 60 --flood-poll 60 --satellite 19
+# Terminal 2: Open-Meteo weather and hazard scores, without optional ledger writes.
+python -m cypress_workers.scheduler.scheduler --weather-only
+```
 
-#    Flood engine standalone (same rule, without the lightning loop; useful for tests):
-python -m cypress_workers.engines.flood --once
+For a deployment with ledger anchoring and 6 PM briefings configured, use the
+full scheduler instead of `--weather-only`:
 
-# 3. Scheduler: 15-min weather -> score -> explain -> save chain, hourly ledger anchor, 6 PM briefings
+```bash
 python -m cypress_workers.scheduler.scheduler
 ```
+
+For one-shot source checks, run these from `backend/workers`:
+
+```bash
+python -m cypress_workers.ingest.weather_live --past-days 30 --forecast-days 3
+python -m cypress_workers.ingest.lightning_glm --satellite 19
+python -m cypress_workers.ingest.river_gauges
+python -m cypress_workers.ingest.nws_alerts
+```
+
+Do not run separate continuous source pollers alongside the alert engine; it
+already polls those sources.
 
 ## Flood rule (engines/flood.py)
 
 River sites get a `flood_risk` alert (severity `warning`, never a stop-work) when any trigger fires:
 
-1. **Heavy-rain night**: overnight rainfall (the last two local-day precipitation sums from
-   `weather_latest.json`) >= 3.0 in on a *river-relevant* site (sites.json `river_site`, a non-X
+1. **Heavy-rain night**: hourly rain from 6 PM yesterday to 6 AM today (or the
+   current observed hour, if earlier) in `weather_latest.json` >= 3.0 in on a
+   *river-relevant* site (sites.json `river_site`, a non-X
    FEMA `flood_zone`, or within 15 mi of a USGS stage gauge; gauge coordinates are permanent, so
    relevance survives an outage while the live stage/rise numbers do not).
 2. **NWS**: an active flood alert in `flood_alerts.json` listing the site's county (ingest polls

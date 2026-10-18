@@ -99,8 +99,9 @@ def fetch_batch(sites: list[dict], past_days: int, forecast_days: int) -> list[d
 
 
 def fetch_hourly_batch(sites: list[dict]) -> list[dict]:
-    """Separate small request: hourly data only for today and tomorrow (not the 30 past days)."""
-    return _request(_base_params(sites) | {"hourly": ",".join(HOURLY_VARS), "forecast_days": 2})
+    """Hourly data for yesterday through tomorrow; yesterday supports observed overnight rain."""
+    return _request(_base_params(sites) | {"hourly": ",".join(HOURLY_VARS),
+                                          "past_days": 1, "forecast_days": 2})
 
 
 def _request(params: dict, retries: int = 4) -> list[dict]:

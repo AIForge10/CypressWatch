@@ -12,6 +12,7 @@ Briefings, every BRIEF_SCAN_SECONDS: each site's LOCAL 18:00 triggers its next-d
 Run (separate process from the stop-work engine):
     cd backend/workers && python -m cypress_workers.scheduler.scheduler
 """
+import argparse
 import json
 import sys
 import time
@@ -38,7 +39,8 @@ DONE_FILE = LIVE / "briefings_done.json"
 
 def active_stop_works() -> set[str]:
     state = read_json(STOP_WORK_FILE, {})
-    return {a["site_id"] for a in state.get("alerts", []) if a.get("status") == "active"}
+    return {a["site_id"] for a in state.get("alerts", [])
+            if a.get("status") == "active" and a.get("type") == "stop_work_lightning"}
 
 
 def run_weather_and_scores() -> list[dict]:
@@ -103,8 +105,13 @@ def run_briefings() -> list[str]:
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser(description="Refresh live site scores and scheduled outputs.")
+    ap.add_argument("--weather-only", action="store_true",
+                    help="refresh weather and scores without ledger anchoring or briefings")
+    args = ap.parse_args()
     last = {"weather": 0.0, "anchor": 0.0, "brief": 0.0}
-    print(f"Scheduler up: chain every {WEATHER_INTERVAL}s, ledger anchor every {ANCHOR_HOURS}h")
+    print(f"Scheduler up: chain every {WEATHER_INTERVAL}s"
+          + (" (weather and scores only)" if args.weather_only else f", ledger anchor every {ANCHOR_HOURS}h"))
     while True:
         now = time.time()
         if now - last["weather"] >= WEATHER_INTERVAL:
@@ -113,10 +120,10 @@ def main() -> None:
                 run_weather_and_scores()
             except Exception as e:
                 print(f"[{now_iso()}] chain failed: {e}")
-        if now - last["anchor"] >= ANCHOR_HOURS * 3600:
+        if not args.weather_only and now - last["anchor"] >= ANCHOR_HOURS * 3600:
             last["anchor"] = now
             run_anchor()
-        if now - last["brief"] >= BRIEF_SCAN_SECONDS:
+        if not args.weather_only and now - last["brief"] >= BRIEF_SCAN_SECONDS:
             last["brief"] = now
             try:
                 run_briefings()
