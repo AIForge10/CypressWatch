@@ -1,0 +1,33 @@
+#cloud-config
+# Vultr "Cloud-Init User-Data" for a fresh Ubuntu 22.04/24.04 instance.
+# Paste this into the Vultr console (Deploy -> Add Script / server -> User data) or use
+# vultr-cli instance create ... --userdata "$(Get-Content deploy/vultr/cloud-init.yaml -Raw)".
+package_update: true
+packages:
+  - python3
+  - python3-venv
+  - python3-pip
+  - git
+  - pigz
+write_files:
+  - path: /etc/cypresswatch.env
+    content: |
+      PYTHONUNBUFFERED=1
+      PYTHONDONTWRITEBYTECODE=1
+  - path: /opt/cypresswatch/deploy.lock
+    content: "waiting for deploy.ps1 to push the code"
+groups:
+  - cypwatch
+users:
+  - name: cypwatch
+    shell: /bin/bash
+    sudo: false
+    groups:
+      - cypwatch
+runcmd:
+  - mkdir -p /opt/cypresswatch /var/lib/cypresswatch /opt/cypresswatch/backend
+  - chown -R cypwatch:cypwatch /opt/cypresswatch /var/lib/cypresswatch
+  - python3 -m venv /opt/cypresswatch/backend/.venv
+  - chown -R cypwatch:cypwatch /opt/cypresswatch/backend/.venv
+  - systemctl mask systemd-networkd-wait-online 2>/dev/null || true
+final_message: "CypressWatch base image ready. Login via ssh key, then run deploy\\deploy.ps1 -HostIp <ip> from your laptop."

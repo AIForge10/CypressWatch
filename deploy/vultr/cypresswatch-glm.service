@@ -1,0 +1,19 @@
+[Unit]
+Description=CypressWatch GLM ingest (GOES-19 real-time flashes)
+After=network-online.target
+Wants=network-online.target
+PartOf=cypresswatch.target
+
+[Service]
+Type=simple
+User=cypwatch
+Group=cypwatch
+WorkingDirectory=/opt/cypresswatch/backend/workers
+EnvironmentFile=/etc/cypresswatch.env
+ExecStart=/opt/cypresswatch/backend/.venv/bin/python -m cypress_workers.ingest.lightning_glm --loop 60
+Restart=always
+RestartSec=10
+SyslogIdentifier=cypresswatch-glm
+
+[Install]
+WantedBy=multi-user.target

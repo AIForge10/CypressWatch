@@ -14,30 +14,32 @@ Setup: install the Arduino IDE (https://www.arduino.cc/en/software) or
 | `ALLCLEAR` / `CLEAR` | green LED, "All clear" |
 | `HAZARD <0..10>` | shows `Hazard: n/10` on the LCD's second line while all-clear |
 
-## ML integration
+## ML integration (secondary, display only)
 
 The hazard-index model is scored server-side (`backend/ml/src/cypress_ml/score.py`
-→ `backend/workers/data/live/scores_latest.json`). The bridge polls that file and
-writes the score to the beacon; a score ≥ 8 (`--trigger`) starts a 30-minute
-stop-work (`STRIKE 1800`), matching the 10-mile/30-minute alert rule in `contracts/`.
+→ `backend/workers/data/live/scores_latest.json`). A hazard score is a probability,
+not a stop-work authority — the bridge only mirrors it on the LCD:
 
 ```bash
 pip install -r hardware/site-beacon/bridge/requirements.txt
 python backend/ml/src/cypress_ml/score.py             # refresh scores
-python hardware/site-beacon/bridge/bridge.py --site site_6043 --port COM5
-python hardware/site-beacon/bridge/bridge.py --site site_6043 --no-device   # dry run
+python hardware/site-beacon/bridge/bridge.py --site site_6043 --ml-score --port COM5
 ```
 
-## Watch mode (mirrors the live engine)
+## Live mode (default: mirrors the stop-work engine)
 
-With the worker engine running, a site can follow the real stop-work state instead of the
-score threshold. The bridge polls `stop_work.json` every `--interval` seconds:
+The beacon's stop-work state must come from the deterministic engine, not the model.
+The bridge listens to the engine's decision log (`events.json`) and resyncs from the
+authoritative state (`stop_work.json`) — reacts within ~1 s to:
+
+- `stop_work_started` / `stop_work_extended` → `STRIKE <remaining>` (LCD shows the real countdown)
+- `all_clear` (30-minute rule expiry) / override → `ALLCLEAR`
+
+A fresh bridge boot picks up an in-progress stop-work from state, so a restart never
+misses an active stop-work.
 
 ```bash
-python hardware/site-beacon/bridge/bridge.py --watch-state site_6043 --port COM5
+python hardware/site-beacon/bridge/bridge.py --site site_6043 --port COM5          # live (default)
+python hardware/site-beacon/bridge/bridge.py --site site_6043 --no-device          # dry run
 ```
-
-`STRIKE <remaining>` is sent when a stop-work starts or is extended (LCD shows the real
-countdown); `ALLCLEAR` is sent when the state expires or is overridden. Parse errors just
-log a warning and keep polling.
 

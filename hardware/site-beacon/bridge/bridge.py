@@ -1,19 +1,19 @@
-"""Site beacon bridge: ML service and live alert state both drive the Arduino beacon.
+"""Site beacon bridge: the beacon follows the LIVE stop-work engine, not ML scores.
 
-Two modes:
-  1. --site : polls the ML hazard scores (written by backend/ml/src/cypress_ml/score.py)
-       HAZARD n        show the model hazard score (0-10) on the LCD while all-clear
-       STRIKE sec      start/reset the 30-minute stop-work countdown (score >= trigger)
-  2. --watch-state : follows the live stop-work engine state
-       (backend/workers/data/live/stop_work.json, written by
-       backend/workers/cypress_workers/engines/lightning.py) and mirrors the alert rule:
-       each stop-work start/extension -> `STRIKE <remaining seconds>`; when the site's
-       stop-work expires (or is overridden) -> `ALLCLEAR`.
+Default mode (a stop-work authority cannot be a probability): the bridge listens for
+stop-work events for one site and mirrors what the engine decided:
+    backend/workers/data/live/events.json  (engine's decision log)
+    backend/workers/data/live/stop_work.json (authoritative state, used for resync)
+    each stop_work_started / stop_work_extended for the site -> `STRIKE <remaining>`
+    all_clear (30-min rule expiry) or manual override        -> `ALLCLEAR`
+
+The ML score stays available as a distinctly secondary signal (--ml-score): it only raises
+the LCD hazard readout on all-clear, and never authorizes a stop-work by itself.
 
 Usage (from the repo root):
     pip install -r hardware/site-beacon/bridge/requirements.txt
-    python hardware/site-beacon/bridge/bridge.py --site site_6043 --port COM5          # ML mode
-    python hardware/site-beacon/bridge/bridge.py --watch-state site_6043 --port COM5   # live mode
+    python hardware/site-beacon/bridge/bridge.py --site site_6043 --port COM5          # live (default)
+    python hardware/site-beacon/bridge/bridge.py --site site_6043 --ml-score           # secondary signal mode
 Without a serial port attached, add --no-device to just print what would be sent.
 """
 import argparse
@@ -25,8 +25,17 @@ from pathlib import Path
 
 BRIDGE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = BRIDGE_DIR.parents[2]
-DEFAULT_SCORES = REPO_ROOT / "backend" / "workers" / "data" / "live" / "scores_latest.json"
-STOP_WORK_FILE = REPO_ROOT / "backend" / "workers" / "data" / "live" / "stop_work.json"
+LIVE = REPO_ROOT / "backend" / "workers" / "data" / "live"
+DEFAULT_SCORES = LIVE / "scores_latest.json"
+STOP_WORK_FILE = LIVE / "stop_work.json"
+EVENTS_FILE = LIVE / "events.json"
+
+DECISION_EVENTS = {
+    "stop_work_started": "STRIKE",
+    "stop_work_extended": "STRIKE",
+    "all_clear": "ALLCLEAR",
+    "override": "ALLCLEAR",
+}
 
 
 def latest_score(scores_file: Path, site_id: str):
@@ -48,37 +57,18 @@ def active_stop_remaining(state_file: Path, site_id: str):
     return None
 
 
-def run_scores_mode(args, send) -> None:
-    scores_file = Path(args.scores)
-    if not scores_file.exists():
-        print(f"error: {scores_file} not found. Run backend/ml/src/cypress_ml/score.py first.", file=sys.stderr)
-        return
-    sent = ""
-    strike_started = False
-    while True:
-        score, scored_at = None, None
-        try:
-            score, scored_at = latest_score(scores_file, args.site)
-        except json.JSONDecodeError as exc:
-            print(f"warning: could not parse scores file ({exc}); retrying", file=sys.stderr)
-        if score is None:
-            print(f"warning: no score for {args.site} yet (scored_at={scored_at})", file=sys.stderr)
-        else:
-            if score >= args.trigger and not strike_started:
-                strike_started = True
-                send(f"STRIKE {args.strike_seconds}")
-            elif score < args.trigger and strike_started:
-                strike_started = False
-            val = str(int(round(score)))
-            if val != sent:
-                sent = val
-                send(f"HAZARD {val}")
-        time.sleep(args.interval)
-
-
-def run_watch_state_mode(args, send) -> None:
-    sent_remaining: set[int] = set()
+def run_live_mode(args, send) -> None:
+    """Listen for the engine's stop-work decisions for one site; resync from state every beat."""
+    if not STOP_WORK_FILE.exists() and not EVENTS_FILE.exists():
+        print("warning: no engine state yet (workers not running?); sitting idle", file=sys.stderr)
     was_active = False
+    seen: set[str] = set()
+    try:
+        seen = {e["event_id"] for e in json.loads(EVENTS_FILE.read_text()).get("events", [])
+                if isinstance(e, dict) and e.get("site_id") == args.site
+                and DECISION_EVENTS.get(e.get("type"))}
+    except (OSError, json.JSONDecodeError):
+        seen = set()
     while True:
         remaining = None
         try:
@@ -88,36 +78,77 @@ def run_watch_state_mode(args, send) -> None:
         except (json.JSONDecodeError, KeyError, ValueError) as exc:
             print(f"warning: stop_work.json unreadable ({exc})", file=sys.stderr)
         active = remaining is not None and remaining > 0
-        if active:
-            if not was_active or remaining not in sent_remaining:  # start or a fresh extension
-                send(f"STRIKE {max(remaining, 60)}")
-                sent_remaining.add(remaining)
-        elif was_active:  # expired or overridden -> all clear
+
+        for event in _new_events(args.site, seen):  # fresh decisions react within ~1 s
+            cmd = DECISION_EVENTS.get(event["type"])
+            if not cmd:
+                continue
+            if cmd == "STRIKE" and not active:
+                continue  # extended a stop-work that just ended; the state resync below decides
+            if cmd == "STRIKE":
+                send(f"STRIKE {max(remaining or 0, 60)}")
+            else:
+                send("ALLCLEAR")
+
+        if active and not was_active:  # missed the event (bridge restart): state resync
+            send(f"STRIKE {max(remaining, 60)}")
+        elif not active and was_active:
             send("ALLCLEAR")
-            sent_remaining = set()
         was_active = active
         time.sleep(args.interval)
 
 
+def _new_events(site_id: str, seen: set[str]) -> list[dict]:
+    """Events for the site we have not reacted to yet (marked consumed by last_event_id cursor)."""
+    try:
+        events = json.loads(EVENTS_FILE.read_text()).get("events", [])
+    except (OSError, json.JSONDecodeError):
+        return []
+    fresh = [e for e in events
+             if isinstance(e, dict) and e.get("site_id") == site_id
+             and e.get("event_id") and e["event_id"] not in seen
+             and DECISION_EVENTS.get(e.get("type"))]
+    for e in fresh:
+        seen.add(e["event_id"])
+    return fresh
+
+
+def run_ml_mode(args, send) -> None:
+    scores_file = Path(args.scores)
+    if not scores_file.exists():
+        print(f"error: {scores_file} not found. Run backend/ml/src/cypress_ml/score.py first.", file=sys.stderr)
+        return
+    sent = ""
+    while True:
+        try:
+            score, scored_at = latest_score(scores_file, args.site)
+        except json.JSONDecodeError as exc:
+            print(f"warning: could not parse scores file ({exc}); retrying", file=sys.stderr)
+            score, scored_at = None, None
+        if score is None:
+            print(f"warning: no score for {args.site} yet (scored_at={scored_at})", file=sys.stderr)
+        else:
+            val = str(int(round(score)))
+            if val != sent:
+                sent = val
+                send(f"HAZARD {val}")
+        time.sleep(args.interval)
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Feed ML hazard scores / live stop-work state to the beacon.")
-    ap.add_argument("--site", help="site_id, e.g. site_6043 (ML scores mode)")
-    ap.add_argument("--watch-state", metavar="SITE_ID", help="mirror the live stop-work engine for this site")
+    ap = argparse.ArgumentParser(description="Feed live stop-work decisions (or the ML readout) to the beacon.")
+    ap.add_argument("--site", required=True, help="site_id, e.g. site_6043")
+    ap.add_argument("--ml-score", action="store_true",
+                    help="secondary mode: LCD shows the ML hazard score; it NEVER authorizes a stop-work")
     ap.add_argument("--port", default=None, help="COM5, /dev/ttyUSB0, ... (omit with --no-device)")
     ap.add_argument("--baud", type=int, default=9600)
-    ap.add_argument("--scores", default=str(DEFAULT_SCORES), help="scores_latest.json to poll")
-    ap.add_argument("--interval", type=float, default=60.0, help="poll interval in seconds")
-    ap.add_argument("--trigger", type=float, default=8.0, help="hazard score that starts a strike (8 = extreme)")
-    ap.add_argument("--strike-seconds", type=int, default=1800, help="stop-work duration (rule: last strike + 30 min)")
+    ap.add_argument("--interval", type=float, default=1.0, help="state poll interval in seconds (live mode)")
+    ap.add_argument("--trigger", type=float, default=8.0, help="[ml mode] score that narrows the readout tone")
     ap.add_argument("--no-device", action="store_true", help="dry run: print commands instead of writing serial")
     args = ap.parse_args()
 
     if not args.no_device and not args.port:
         ap.error("--port is required unless --no-device is given")
-    if bool(args.site) == bool(args.watch_state):
-        ap.error("give exactly one of --site SITE_ID (ML scores) or --watch-state SITE_ID (live engine state)")
-    if args.watch_state:
-        args.site = args.watch_state
 
     device = None
     if not args.no_device:
@@ -132,10 +163,10 @@ def main() -> int:
             device.flush()
 
     try:
-        if args.watch_state:
-            run_watch_state_mode(args, send)
+        if args.ml_score:
+            run_ml_mode(args, send)
         else:
-            run_scores_mode(args, send)
+            run_live_mode(args, send)
     except KeyboardInterrupt:
         return 0
     finally:
