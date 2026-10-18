@@ -56,6 +56,8 @@ trap 'rm -rf "$STAGE"' EXIT
 EXCLUDES=(--exclude='.env' --exclude='__pycache__' --exclude='*.pyc' --exclude='.DS_Store'
           --exclude='backend/ml/data' --exclude='backend/ml/notebooks')
 for k in "${KEEP[@]}"; do EXCLUDES+=(--exclude="backend/$k"); done
+# macOS tar would add Mac-only metadata that Linux tar warns about on every file.
+[[ $(uname) == Darwin ]] && EXCLUDES+=(--no-mac-metadata --no-xattrs)
 COPYFILE_DISABLE=1 tar -czf "$STAGE/backend.tgz" -C "$ROOT" "${EXCLUDES[@]}" backend
 echo "   $(du -h "$STAGE/backend.tgz" | cut -f1) -> $HOST_IP"
 
