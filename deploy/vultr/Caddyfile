@@ -1,0 +1,6 @@
+# HTTPS in front of the API. Caddy gets and renews a Let's Encrypt certificate on its own.
+# CW_DOMAIN comes from /etc/default/caddy (deploy.sh sets it to <ip-with-dashes>.sslip.io or your own domain).
+{$CW_DOMAIN} {
+	encode gzip
+	reverse_proxy 127.0.0.1:8000
+}

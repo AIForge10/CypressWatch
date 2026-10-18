@@ -1,0 +1,19 @@
+[Unit]
+Description=CypressWatch Tiger sync (live JSON -> Tiger Data every 5 min, so the API serves fresh data)
+After=network-online.target cypresswatch-scheduler.service
+Wants=network-online.target
+PartOf=cypresswatch.target
+
+[Service]
+Type=simple
+User=cypwatch
+Group=cypwatch
+WorkingDirectory=/opt/cypresswatch/backend/db
+EnvironmentFile=/etc/cypresswatch.env
+ExecStart=/opt/cypresswatch/backend/.venv/bin/python -m cypress_db.sync --every 5
+Restart=always
+RestartSec=10
+SyslogIdentifier=cypresswatch-sync
+
+[Install]
+WantedBy=multi-user.target
