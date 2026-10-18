@@ -27,3 +27,17 @@ python backend/ml/src/cypress_ml/score.py             # refresh scores
 python hardware/site-beacon/bridge/bridge.py --site site_6043 --port COM5
 python hardware/site-beacon/bridge/bridge.py --site site_6043 --no-device   # dry run
 ```
+
+## Watch mode (mirrors the live engine)
+
+With the worker engine running, a site can follow the real stop-work state instead of the
+score threshold. The bridge polls `stop_work.json` every `--interval` seconds:
+
+```bash
+python hardware/site-beacon/bridge/bridge.py --watch-state site_6043 --port COM5
+```
+
+`STRIKE <remaining>` is sent when a stop-work starts or is extended (LCD shows the real
+countdown); `ALLCLEAR` is sent when the state expires or is overridden. Parse errors just
+log a warning and keep polling.
+

@@ -1,7 +1,7 @@
 {
   "model_version": "hazard-index-v1",
   "algorithm": "LightGBM gradient-boosted trees (57 trees); probability mapped to a 0\u201310 percentile score",
-  "trained_at": "2026-10-17T19:01:08Z",
+  "trained_at": "2026-10-17T22:51:45Z",
   "training_data": [
     {
       "name": "NOAA Storm Events (FL, GA, AL), events within 25 miles of a site",
