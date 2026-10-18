@@ -27,11 +27,13 @@ def beacon_state(site_id: str, x_beacon_key: str | None = Header(None)):
     from app.core.config import settings
     if not settings.beacon_key or not x_beacon_key or not hmac.compare_digest(x_beacon_key, settings.beacon_key):
         raise HTTPException(status_code=401, detail={"error": "unauthorized", "message": "Valid X-Beacon-Key required."})
-    for alert in read_json(STOP_WORK_FILE, {"alerts": []}).get("alerts", []):
-        if (alert.get("site_id") == site_id and alert.get("status") == "active"
-                and alert.get("type", "stop_work_lightning") == "stop_work_lightning" and alert.get("stop_work_until")):
-            return {"site_id": site_id, "active": True, "stop_work_until": alert["stop_work_until"],
-                    "simulated": bool(alert.get("simulated")), "server_time": now_iso()}
+    active = [a for a in read_json(STOP_WORK_FILE, {"alerts": []}).get("alerts", [])
+              if a.get("site_id") == site_id and a.get("status") == "active"
+              and a.get("type", "stop_work_lightning") == "stop_work_lightning" and a.get("stop_work_until")]
+    if active:  # several can be open for one site; the crew must wait for the one that ends last
+        alert = max(active, key=lambda a: a["stop_work_until"])
+        return {"site_id": site_id, "active": True, "stop_work_until": alert["stop_work_until"],
+                "simulated": bool(alert.get("simulated")), "server_time": now_iso()}
     return {"site_id": site_id, "active": False, "stop_work_until": None, "simulated": False, "server_time": now_iso()}
 
 LEDGER_DB = Path(__file__).resolve().parents[3] / "ledger" / "data" / "ledger.db"
