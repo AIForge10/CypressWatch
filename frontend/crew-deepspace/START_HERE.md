@@ -41,14 +41,18 @@ You need a terminal (Mac: open "Terminal". Windows: open "PowerShell").
 
 `npx deepspace dev start` runs it locally and prints a localhost address. (It also needs the login step above.)
 
-## Switching from demo data to the real backend (later, with M4)
+## Switching from demo data to the real backend
 
-1. Open the file `.env` in this folder.
-2. Change `VITE_USE_MOCKS=true` to `VITE_USE_MOCKS=false` and add the backend address:
-   `VITE_API_URL=https://your-backend-address`
-3. Deploy again (`npx deepspace deploy`). No screen code changes.
-Note: the backend currently expects Auth0 login tokens (see DEEPSPACE_AUTH0_CHECK notes). Settle that with the team first;
-until then the real mode will answer "unauthorized".
+The backend is live on Vultr and accepts DeepSpace sign-in tokens for crew (no Auth0 needed in this app).
+
+1. Open the file `.env` in this folder and set:
+   ```
+   VITE_USE_MOCKS=false
+   VITE_API_URL=https://64-177-55-82.sslip.io
+   ```
+2. Deploy again (`npx deepspace deploy`). No screen code changes.
+3. Crew members must be on the backend's crew list (`CREW_ASSIGNMENTS`, email → site), or they see
+   "not on the CypressWatch crew list" (403). Send their Google emails to M3/M4 to be added.
 
 ## Where things are (so you can find your way around)
 
