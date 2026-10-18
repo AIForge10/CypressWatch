@@ -51,6 +51,9 @@ __pycache__/
 backend/ledger/program/target/
 backend/ledger/program/.anchor/
 backend/ledger/program/test-ledger/
+backend/ledger/.keys/
+backend/ledger/data/
+backend/ledger/.keys/devnet-keypair.json
 
 # --- Arduino ---
 hardware/site-beacon/firmware/build/

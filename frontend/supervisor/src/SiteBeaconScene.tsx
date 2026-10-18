@@ -1,20 +1,22 @@
-import { Component, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Component, memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js';
 import { CanvasTexture, CatmullRomCurve3, Color, DataTexture, DoubleSide, Float32BufferAttribute, PlaneGeometry, RepeatWrapping, RGBAFormat, SRGBColorSpace, UnsignedByteType, Vector3 } from 'three';
 import type { Group, Mesh, PointLight, TubeGeometry } from 'three';
+import type { SiteLandscape } from './data';
 
 type Weather = 'storm' | 'overcast' | 'sunny';
-type SceneProps = { active: boolean; strikeCount: number; strikeAnimationId: number; weather: Weather };
+type SceneProps = { active: boolean; strikeCount: number; strikeAnimationId: number; weather: Weather; landscape: SiteLandscape };
 
 type StrikeLocation = { x: number; z: number; miles: number; cloud: [number, number, number] };
-// Diagrammatic positions sit beyond the facility footprint; labels carry the demo distance.
+// Diagrammatic positions sit well beyond the facility footprint so the visual
+// impact reads as an off-site strike; labels carry the demo distance.
 const strikeLocations: StrikeLocation[] = [
-  { x: 2.6, z: 2.7, miles: 8.4, cloud: [2.7, 3.0, 2.6] },
-  { x: -3.2, z: 1.1, miles: 5.0, cloud: [-3.2, 3.1, 1.1] },
-  { x: 3.4, z: 0.7, miles: 6.7, cloud: [3.3, 2.9, 0.9] },
-  { x: -2.9, z: 2.55, miles: 9.1, cloud: [-3.0, 3.1, 2.3] },
+  { x: 4.25, z: 4.15, miles: 8.4, cloud: [4.3, 3.0, 4.0] },
+  { x: -4.7, z: 1.7, miles: 5.0, cloud: [-4.6, 3.1, 1.7] },
+  { x: 4.65, z: 1.1, miles: 6.7, cloud: [4.6, 2.9, 1.3] },
+  { x: -4.35, z: 4.0, miles: 9.1, cloud: [-4.3, 3.1, 3.8] },
 ];
 const terrainNoise = new ImprovedNoise();
 
@@ -55,16 +57,16 @@ function terrainHeight(x: number, z: number) {
   return -0.29 + blend * (0.16 + broad + detail + backRise + drainage);
 }
 
-function Terrain({ weather }: { weather: Weather }) {
+function Terrain({ weather, landscape }: { weather: Weather; landscape: SiteLandscape }) {
   const texture = useMemo(() => surfaceTexture('earth'), []);
   const geometry = useMemo(() => {
     const ground = new PlaneGeometry(19, 19, 120, 120);
     ground.rotateX(-Math.PI / 2);
     const positions = ground.attributes.position;
     const colors = new Float32Array(positions.count * 3);
-    const low = new Color(weather === 'storm' ? '#536b5d' : '#657b5e');
-    const grass = new Color(weather === 'storm' ? '#7e977e' : '#879d76');
-    const high = new Color('#9e967c');
+    const low = new Color(landscape === 'scrub' ? '#756f57' : weather === 'storm' ? '#536b5d' : '#657b5e');
+    const grass = new Color(landscape === 'scrub' ? '#a49d76' : landscape === 'wetland' ? '#6f8d75' : weather === 'storm' ? '#7e977e' : '#879d76');
+    const high = new Color(landscape === 'scrub' ? '#b2a489' : '#9e967c');
     const shade = new Color();
     for (let index = 0; index < positions.count; index++) {
       const x = positions.getX(index);
@@ -82,7 +84,7 @@ function Terrain({ weather }: { weather: Weather }) {
     ground.setAttribute('color', new Float32BufferAttribute(colors, 3));
     ground.computeVertexNormals();
     return ground;
-  }, [weather]);
+  }, [weather, landscape]);
   useEffect(() => () => geometry.dispose(), [geometry]);
   useEffect(() => () => texture.dispose(), [texture]);
   return <mesh geometry={geometry} receiveShadow castShadow><meshStandardMaterial map={texture} vertexColors roughness={1} side={DoubleSide} /></mesh>;
@@ -149,22 +151,46 @@ function Block({ position, size, color, metalness = 0 }: {
 function Tank({ position, height = 0.8, radius = 0.32 }: { position: [number, number, number]; height?: number; radius?: number }) {
   return <group position={position}>
     <mesh position={[0, height / 2, 0]} castShadow receiveShadow><cylinderGeometry args={[radius, radius, height, 32]} /><meshStandardMaterial color="#849392" metalness={0.35} roughness={0.75} /></mesh>
-    {[0.16, height - 0.12].map((y) => <mesh key={y} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[radius + 0.012, 0.017, 6, 32]} /><meshStandardMaterial color="#4c5c5e" metalness={0.6} /></mesh>)}
+    {[0.12, height * 0.36, height * 0.68, height - 0.1].map((y) => <mesh key={y} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[radius + 0.013, 0.014, 6, 32]} /><meshStandardMaterial color="#4c5c5e" metalness={0.6} roughness={0.48} /></mesh>)}
     <mesh position={[0, height + 0.025, 0]}><cylinderGeometry args={[radius + 0.025, radius + 0.025, 0.05, 32]} /><meshStandardMaterial color="#536b6e" metalness={0.4} /></mesh>
     <mesh position={[0, height + 0.062, 0]}><cylinderGeometry args={[radius * 0.35, radius * 0.35, 0.04, 20]} /><meshStandardMaterial color="#2e4144" metalness={0.6} /></mesh>
+    <mesh position={[0, height + 0.1, 0]}><cylinderGeometry args={[radius * 0.13, radius * 0.13, 0.08, 12]} /><meshStandardMaterial color="#758a89" metalness={0.55} /></mesh>
+    <Block position={[radius + 0.018, height / 2, 0]} size={[0.035, height - 0.13, 0.025]} color="#52686a" metalness={0.55} />
+    {Array.from({ length: Math.max(3, Math.floor(height / 0.15)) }, (_, index) => <Block key={index} position={[radius + 0.05, 0.1 + index * 0.15, 0]} size={[0.12, 0.017, 0.03]} color="#c0ccca" metalness={0.5} />)}
+    <mesh position={[radius + 0.05, height * 0.52, 0]} rotation={[0, 0, Math.PI / 2]}><torusGeometry args={[0.055, 0.012, 6, 16]} /><meshStandardMaterial color="#cd533b" metalness={0.3} /></mesh>
   </group>;
 }
 
-function Plant() {
+function Pipe({ points, radius = 0.035, color = '#8d9c9a' }: { points: [number, number, number][]; radius?: number; color?: string }) {
+  const curve = useMemo(() => new CatmullRomCurve3(points.map(([x, y, z]) => new Vector3(x, y, z)), false, 'centripetal'), [points]);
+  return <mesh castShadow><tubeGeometry args={[curve, Math.max(12, points.length * 8), radius, 8, false]} /><meshStandardMaterial color={color} metalness={0.55} roughness={0.48} /></mesh>;
+}
+
+const Plant = memo(function Plant() {
   return <group>
     <Block position={[0, -0.045, 0]} size={[5.9, 0.13, 4.75]} color="#777d77" />
     <Block position={[0, 0.07, 0]} size={[5.5, 0.16, 4.3]} color="#9aa7a3" />
     <Block position={[0, 0.7, 0]} size={[2.45, 1.16, 1.8]} color="#5e6d6b" />
+    <Block position={[0, 0.19, 0.925]} size={[2.53, 0.1, 0.1]} color="#9ba9a5" />
+    <Block position={[0, 1.12, 0.923]} size={[2.53, 0.055, 0.08]} color="#425657" metalness={0.3} />
+    {[-1.18, -0.53, 0.04, 0.61, 1.18].map((x) => <Block key={`front-cladding-${x}`} position={[x, 0.68, 0.926]} size={[0.022, 0.87, 0.032]} color="#91a2a0" metalness={0.25} />)}
     <Block position={[0, 1.35, 0]} size={[2.65, 0.14, 2]} color="#a3aca8" metalness={0.25} />
     <Block position={[0, 1.44, 0]} size={[2.18, 0.05, 1.58]} color="#697b7b" />
     {[-0.95, -0.45, 0.05, 0.55, 1.05].map((x) => <Block key={`roof-seam-${x}`} position={[x, 1.479, 0]} size={[0.015, 0.012, 1.57]} color="#536565" />)}
+    {[-1, 1].map((side) => <group key={`parapet-${side}`}>
+      <Block position={[side * 1.3, 1.51, 0]} size={[0.045, 0.26, 2.04]} color="#a9b6b2" metalness={0.25} />
+      <Block position={[0, 1.51, side * 0.98]} size={[2.63, 0.26, 0.045]} color="#a9b6b2" metalness={0.25} />
+      <Block position={[side * 1.3, 1.65, 0]} size={[0.075, 0.03, 2.06]} color="#53696b" metalness={0.4} />
+    </group>)}
     <Block position={[0, 0.42, 0.924]} size={[0.42, 0.62, 0.045]} color="#394e50" metalness={0.4} />
     <Block position={[0, 0.42, 0.951]} size={[0.025, 0.62, 0.01]} color="#8a9c9b" />
+    <Block position={[0, 0.77, 1.025]} size={[0.64, 0.055, 0.3]} color="#516769" metalness={0.4} />
+    <Block position={[0, 0.16, 1.17]} size={[0.62, 0.075, 0.45]} color="#aebbb6" />
+    <mesh position={[0.24, 0.47, 0.978]}><sphereGeometry args={[0.023, 8, 6]} /><meshStandardMaterial color="#d5c39d" metalness={0.7} /></mesh>
+    {[-0.25, 0.25].map((x) => <group key={`wall-light-${x}`} position={[x * 3.4, 1.18, 0.955]}>
+      <Block position={[0, 0, 0]} size={[0.11, 0.055, 0.08]} color="#394e50" metalness={0.45} />
+      <mesh position={[0, -0.055, 0.03]}><sphereGeometry args={[0.035, 8, 6]} /><meshStandardMaterial color="#e4dbba" emissive="#927f55" emissiveIntensity={0.25} /></mesh>
+    </group>)}
     {[-0.82, -0.25, 0.32, 0.89].map((x) => <group key={`window-${x}`}>
       <Block position={[x, 0.84, 0.912]} size={[0.4, 0.45, 0.04]} color="#344c50" metalness={0.5} />
       <Block position={[x, 0.84, 0.936]} size={[0.32, 0.36, 0.012]} color="#779b9e" metalness={0.45} />
@@ -174,12 +200,24 @@ function Plant() {
     {[-0.72, -0.48, -0.24, 0, 0.24, 0.48, 0.72].map((z) => <Block key={`wall-rib-${z}`} position={[-1.237, 0.7, z]} size={[0.025, 1.1, 0.018]} color="#83928f" />)}
     <Block position={[-0.68, 1.55, 0]} size={[0.58, 0.16, 0.54]} color="#52696b" />
     <Block position={[0.64, 1.55, 0.05]} size={[0.6, 0.16, 0.54]} color="#52696b" />
-    {[-0.68, 0.64].map((x) => <group key={`hvac-${x}`}><Block position={[x, 1.67, 0]} size={[0.5, 0.08, 0.46]} color="#879796" />{[-0.16, 0, 0.16].map((z) => <Block key={z} position={[x + 0.26, 1.56, z]} size={[0.015, 0.12, 0.025]} color="#273d40" />)}</group>)}
+    {[-0.68, 0.64].map((x) => <group key={`hvac-${x}`}><Block position={[x, 1.67, 0]} size={[0.5, 0.08, 0.46]} color="#879796" />{[-0.16, 0, 0.16].map((z) => <Block key={z} position={[x + 0.26, 1.56, z]} size={[0.015, 0.12, 0.025]} color="#273d40" />)}
+      <mesh position={[x, 1.718, 0]} rotation={[-Math.PI / 2, 0, 0]}><torusGeometry args={[0.17, 0.016, 6, 24]} /><meshStandardMaterial color="#3b5153" metalness={0.55} /></mesh>
+      {[0, Math.PI / 2].map((angle) => <mesh key={angle} position={[x, 1.721, 0]} rotation={[0, angle, 0]}><boxGeometry args={[0.25, 0.012, 0.038]} /><meshStandardMaterial color="#4e6667" metalness={0.45} /></mesh>)}
+      <mesh position={[x, 1.73, 0]}><cylinderGeometry args={[0.028, 0.028, 0.025, 10]} /><meshStandardMaterial color="#aebeb9" metalness={0.5} /></mesh>
+    </group>)}
     {[-0.55, 0.52].map((x, index) => <group key={`stack-${x}`} position={[x, 1.45, -0.32]}>
       <mesh position={[0, index ? 0.65 : 0.83, 0]} castShadow><cylinderGeometry args={[0.15, 0.21, index ? 1.3 : 1.66, 20]} /><meshStandardMaterial color="#7f9798" metalness={0.3} roughness={0.5} /></mesh>
       <mesh position={[0, index ? 1.33 : 1.69, 0]}><torusGeometry args={[0.155, 0.034, 8, 24]} /><meshStandardMaterial color="#353531" /></mesh>
       <mesh position={[0, index ? 1.21 : 1.56, 0]}><cylinderGeometry args={[0.153, 0.153, 0.12, 20]} /><meshStandardMaterial color="#cd533b" /></mesh>
+      {[0.26, 0.62, index ? 0.98 : 1.33].map((y) => <mesh key={y} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.18 - y * 0.012, 0.018, 6, 24]} /><meshStandardMaterial color="#465b5c" metalness={0.6} /></mesh>)}
+      <Block position={[0, 0.5, 0.21]} size={[0.055, 0.85, 0.03]} color="#cad3cc" metalness={0.5} />
+      {[0.22, 0.42, 0.62, 0.82].map((y) => <Block key={y} position={[0, y, 0.23]} size={[0.23, 0.018, 0.025]} color="#bdcac7" metalness={0.5} />)}
     </group>)}
+    <Pipe points={[[-0.85, 1.51, -0.55], [-0.8, 1.56, -0.55], [-0.8, 1.56, -0.3], [-0.55, 1.56, -0.3]]} radius={0.034} color="#a6b7b3" />
+    <Pipe points={[[0.64, 1.51, 0.31], [0.62, 1.61, 0.31], [0.52, 1.61, 0.13], [0.52, 1.58, -0.18]]} radius={0.03} color="#aab9b5" />
+    <Block position={[1.31, 0.72, -0.45]} size={[0.055, 1.06, 0.06]} color="#c3d0c9" metalness={0.45} />
+    <Block position={[1.31, 0.72, -0.75]} size={[0.055, 1.06, 0.06]} color="#c3d0c9" metalness={0.45} />
+    {[0.3, 0.48, 0.66, 0.84, 1.02, 1.2].map((y) => <Block key={`wall-ladder-${y}`} position={[1.36, y, -0.6]} size={[0.07, 0.018, 0.33]} color="#9eb3af" metalness={0.45} />)}
     <Block position={[-1.88, 0.45, 0.75]} size={[1.05, 0.68, 0.85]} color="#687d7c" />
     <Block position={[-1.88, 0.82, 0.75]} size={[1.16, 0.08, 0.96]} color="#aec3c3" />
     {[-2.22, -2.03, -1.84, -1.65].map((x) => <Block key={`louver-${x}`} position={[x, 0.54, 1.18]} size={[0.11, 0.24, 0.014]} color="#344d50" />)}
@@ -190,23 +228,35 @@ function Plant() {
       <mesh position={[0, 1.31, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.375, 0.035, 8, 32]} /><meshStandardMaterial color="#657e80" /></mesh>
       <mesh position={[0, 1.32, 0]}><cylinderGeometry args={[0.32, 0.32, 0.012, 32]} /><meshStandardMaterial color="#334344" roughness={1} /></mesh>
       {[0.25, 0.55, 0.86, 1.13].map((y) => <mesh key={y} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.26 + y * 0.09, 0.012, 5, 48]} /><meshStandardMaterial color="#788984" /></mesh>)}
+      {Array.from({ length: 8 }, (_, index) => {
+        const angle = index * Math.PI / 4;
+        return <mesh key={`louver-${index}`} position={[Math.cos(angle) * 0.32, 0.6, Math.sin(angle) * 0.32]} rotation={[0, -angle, 0]} castShadow><boxGeometry args={[0.015, 0.58, 0.045]} /><meshStandardMaterial color="#6f8583" metalness={0.28} roughness={0.8} /></mesh>;
+      })}
+      {[0, Math.PI / 2].map((angle) => <mesh key={`fan-${angle}`} position={[0, 1.336, 0]} rotation={[0, angle, 0]}><boxGeometry args={[0.47, 0.017, 0.065]} /><meshStandardMaterial color="#7d9794" metalness={0.45} /></mesh>)}
+      <mesh position={[0, 1.35, 0]}><cylinderGeometry args={[0.07, 0.07, 0.04, 12]} /><meshStandardMaterial color="#a2b5b1" metalness={0.45} /></mesh>
     </group>)}
     <Block position={[1.9, 0.46, 1.15]} size={[1.25, 0.55, 0.62]} color="#526d70" />
     {[1.48, 1.9, 2.32].map((x) => <Block key={`transformer-${x}`} position={[x, 0.82, 1.15]} size={[0.055, 0.25, 0.55]} color="#9ac2c9" />)}
+    {[1.55, 1.78, 2.01, 2.24].map((x) => <Block key={`transformer-vent-${x}`} position={[x, 0.44, 1.475]} size={[0.1, 0.34, 0.02]} color="#304b4e" metalness={0.35} />)}
+    {[1.62, 1.9, 2.18].map((x) => <group key={`insulator-${x}`} position={[x, 0.76, 1.1]}>
+      <mesh position={[0, 0.2, 0]}><cylinderGeometry args={[0.05, 0.05, 0.4, 12]} /><meshStandardMaterial color="#c4d2cf" roughness={0.34} /></mesh>
+      {[0.13, 0.24, 0.34].map((y) => <mesh key={y} position={[0, y, 0]}><cylinderGeometry args={[0.09, 0.09, 0.025, 12]} /><meshStandardMaterial color="#8ba9aa" roughness={0.4} /></mesh>)}
+    </group>)}
     {[-0.65, 0.65].map((z) => <mesh key={`pipe-${z}`}><tubeGeometry args={[new CatmullRomCurve3([new Vector3(-2.3, 0.58, z), new Vector3(-1.45, 0.58, z), new Vector3(-1.36, 0.45, z), new Vector3(-1.2, 0.45, z)]), 20, 0.055, 8, false]} /><meshStandardMaterial color="#8a9290" metalness={0.6} roughness={0.55} /></mesh>)}
     <Block position={[0, 0.18, 2.38]} size={[6.6, 0.02, 0.33]} color="#849b9a" />
     <Block position={[-3.18, 0.18, 0]} size={[0.35, 0.02, 4.8]} color="#849b9a" />
   </group>;
-}
+});
 
 function Tree({ position, scale = 1, broadleaf = false }: { position: [number, number, number]; scale?: number; broadleaf?: boolean }) {
   return <group position={position} scale={scale}>
     <mesh position={[0, 0.47, 0]} castShadow><cylinderGeometry args={[0.065, 0.11, 0.94, 9]} /><meshStandardMaterial color="#635c4a" roughness={1} /></mesh>
     {broadleaf ? <>
-      {[[-0.34, 1.23, 0, 0.52], [0.27, 1.32, 0.04, 0.54], [0, 1.58, -0.16, 0.58], [0.06, 1.15, 0.35, 0.46]].map(([x, y, z, size], index) => <mesh key={index} position={[x, y, z]} scale={[size, size * 0.8, size * 0.83]} castShadow><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial color={['#526e55', '#607e5e', '#6b8560', '#506c56'][index]} roughness={1} flatShading /></mesh>)}
+      {[[-0.23, 0.99, 0, -0.42], [0.18, 1.03, -0.08, 0.45], [0.06, 1.19, 0.13, 0.12]].map(([x, y, z, tilt], index) => <mesh key={`branch-${index}`} position={[x, y, z]} rotation={[0, 0, tilt]}><cylinderGeometry args={[0.024, 0.045, 0.67, 7]} /><meshStandardMaterial color="#665e4e" roughness={1} /></mesh>)}
+      {[[-0.34, 1.23, 0, 0.52], [0.27, 1.32, 0.04, 0.54], [0, 1.58, -0.16, 0.58], [0.06, 1.15, 0.35, 0.46], [-0.38, 1.5, 0.17, 0.24], [0.34, 1.66, -0.15, 0.22]].map(([x, y, z, size], index) => <mesh key={index} position={[x, y, z]} scale={[size, size * 0.8, size * 0.83]} castShadow><icosahedronGeometry args={[1, 2]} /><meshStandardMaterial color={['#526e55', '#607e5e', '#6b8560', '#506c56'][index % 4]} roughness={1} /></mesh>)}
     </> : <>
-      <mesh position={[-0.08, 1.15, 0]} scale={[0.55, 0.78, 0.53]} castShadow><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial color="#445d50" roughness={1} flatShading /></mesh>
-      <mesh position={[0.12, 1.63, -0.04]} scale={[0.43, 0.73, 0.43]} castShadow><icosahedronGeometry args={[1, 1]} /><meshStandardMaterial color="#567363" roughness={1} flatShading /></mesh>
+      <mesh position={[-0.08, 1.15, 0]} scale={[0.55, 0.78, 0.53]} castShadow><icosahedronGeometry args={[1, 2]} /><meshStandardMaterial color="#445d50" roughness={1} /></mesh>
+      <mesh position={[0.12, 1.63, -0.04]} scale={[0.43, 0.73, 0.43]} castShadow><icosahedronGeometry args={[1, 2]} /><meshStandardMaterial color="#567363" roughness={1} /></mesh>
     </>}
   </group>;
 }
@@ -249,19 +299,81 @@ function Fence() {
   </group>;
 }
 
-function Surroundings({ weather }: { weather: Weather }) {
+function ChannelRibbon({ width, offset = 0, lift, color, opacity = 1 }: { width: number; offset?: number; lift: number; color: string; opacity?: number }) {
+  const geometry = useMemo(() => {
+    const ribbon = new PlaneGeometry(width, 19, 10, 96);
+    ribbon.rotateX(-Math.PI / 2);
+    const positions = ribbon.attributes.position;
+    for (let index = 0; index < positions.count; index++) {
+      const z = positions.getZ(index);
+      const x = -5.9 + positions.getX(index) + offset + Math.sin(z * 0.55) * 0.46;
+      positions.setXYZ(index, x, terrainHeight(x, z) + lift, z);
+    }
+    positions.needsUpdate = true;
+    ribbon.computeVertexNormals();
+    return ribbon;
+  }, [width, offset, lift]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return <mesh geometry={geometry} receiveShadow><meshStandardMaterial color={color} metalness={opacity < 1 ? 0.25 : 0} roughness={opacity < 1 ? 0.35 : 1} transparent={opacity < 1} opacity={opacity} side={DoubleSide} /></mesh>;
+}
+
+function Waterway() {
+  return <group>
+    <ChannelRibbon width={3.15} lift={0.028} color="#8b9077" />
+    <ChannelRibbon width={2.5} lift={0.052} color="#4b7780" opacity={0.96} />
+    {Array.from({ length: 13 }, (_, index) => {
+      const z = -8.5 + index * 1.35;
+      const x = -5.9 + Math.sin(z * 0.55) * 0.46 + (index % 2 ? 0.38 : -0.35);
+      return <mesh key={`ripple-${index}`} position={[x, terrainHeight(x, z) + 0.062, z]} rotation={[-Math.PI / 2, 0, index * 0.15]}>
+        <planeGeometry args={[0.37 + (index % 3) * 0.13, 0.025]} />
+        <meshBasicMaterial color="#bdd4d2" transparent opacity={0.48} depthWrite={false} side={DoubleSide} />
+      </mesh>;
+    })}
+    {Array.from({ length: 18 }, (_, index) => {
+      const z = -8.2 + index * 0.91;
+      const x = -4.2 + Math.sin(z * 0.55) * 0.46 + (index % 3) * 0.08;
+      return <mesh key={`reeds-${index}`} position={[x, terrainHeight(x, z) + 0.23, z]} rotation={[0, 0, index % 2 ? 0.18 : -0.13]} castShadow>
+        <cylinderGeometry args={[0.008, 0.025, 0.46 + (index % 4) * 0.1, 5]} />
+        <meshStandardMaterial color={index % 2 ? '#718d62' : '#8d9368'} roughness={1} />
+      </mesh>;
+    })}
+  </group>;
+}
+
+function WetlandPools() {
+  const pools = [[-4.6, 3.2, 0.84], [4.3, 3.55, 0.6], [-4.7, -3.85, 0.48]] as const;
+  return <group>{pools.map(([x, z, radius], index) => <group key={index} position={[x, terrainHeight(x, z) + 0.04, z]}>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} scale={[1.4, 0.8, 1]}><circleGeometry args={[radius + 0.14, 48]} /><meshStandardMaterial color="#838a6f" roughness={1} side={DoubleSide} /></mesh>
+    <mesh position={[0, 0.016, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[1.4, 0.8, 1]}><circleGeometry args={[radius, 48]} /><meshStandardMaterial color="#4f7777" metalness={0.15} roughness={0.34} side={DoubleSide} /></mesh>
+    {[-1, 1].map((side) => <mesh key={side} position={[side * radius * 1.3, 0.21, radius * 0.18]} rotation={[0, 0, side * 0.13]}><cylinderGeometry args={[0.009, 0.024, 0.4, 5]} /><meshStandardMaterial color="#728b5d" roughness={1} /></mesh>)}
+  </group>)}</group>;
+}
+
+function ScrubDetails() {
+  return <group>{Array.from({ length: 18 }, (_, index) => {
+    const x = Math.sin(index * 8.31) * 6.7;
+    const z = Math.cos(index * 5.17) * 6.5;
+    return Math.hypot(x, z) < 4.4 ? null : <mesh key={index} position={[x, terrainHeight(x, z) + 0.12, z]} rotation={[0.15, index * 1.7, 0.1]} scale={[0.23, 0.15, 0.19]} castShadow>
+      <dodecahedronGeometry args={[1, 0]} /><meshStandardMaterial color={index % 2 ? '#a6a18c' : '#847f6e'} roughness={1} flatShading />
+    </mesh>;
+  })}</group>;
+}
+
+function Surroundings({ weather, landscape }: { weather: Weather; landscape: SiteLandscape }) {
   const trees = [[-5.3, -0.7, 1], [-4.9, 2.3, 0.78], [-3.6, -4.1, 0.9], [-1.2, -5.2, 0.7], [3.7, -4, 0.84], [5.1, -1.6, 0.95], [5.25, 2.3, 0.72], [3.8, 4.1, 0.85], [-3.5, 4.2, 0.8], [-6.3, -3.1, 0.7], [6.1, 3.4, 0.75]] as const;
   const shrubs = [[-6.1, 0.7], [-5.7, -2.3], [-4.8, -3.5], [-2.5, -4.7], [0.6, -5.5], [2.1, -4.8], [4.7, -3.5], [5.8, 0.4], [4.8, 3.3], [2.8, 4.6], [-2.2, 4.9], [-4.8, 3.5]] as const;
   return <group>
-    <Terrain weather={weather} />
+    <Terrain weather={weather} landscape={landscape} />
     <TerrainRoad center={[-0.2, 5.35]} size={[11.5, 0.72]} />
     <TerrainRoad center={[5.25, 0]} size={[0.65, 9.7]} />
-    <mesh position={[-4.6, terrainHeight(-4.6, 3.2) + 0.025, 3.2]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[0.65, 48]} /><meshStandardMaterial color="#556f6b" roughness={0.3} metalness={0.15} side={DoubleSide} /></mesh>
+    {landscape === 'river' && <Waterway />}
+    {landscape === 'wetland' && <WetlandPools />}
+    {landscape === 'scrub' && <ScrubDetails />}
     <Fence />
     <UtilityPole position={[-5.25, terrainHeight(-5.25, 3.85), 3.85]} />
     <UtilityPole position={[-3.6, terrainHeight(-3.6, 4.35), 4.35]} />
     <UtilityWires />
-    {trees.map(([x, z, scale], index) => <Tree key={index} position={[x, terrainHeight(x, z), z]} scale={scale} broadleaf={index % 3 !== 0} />)}
+    {trees.map(([x, z, scale], index) => (landscape === 'river' && x < -3.8) || (landscape === 'scrub' && index % 3 !== 0) ? null : <Tree key={index} position={[x, terrainHeight(x, z), z]} scale={scale} broadleaf={index % 3 !== 0} />)}
     {shrubs.map(([x, z], index) => <Shrub key={index} position={[x, terrainHeight(x, z), z]} scale={index % 3 === 0 ? 1.25 : 0.9} />)}
     {Array.from({ length: 36 }, (_, index) => {
       const x = Math.sin(index * 14.51) * 7.5;
@@ -434,7 +546,10 @@ function CameraControls({ reducedMotion }: { reducedMotion: boolean }) {
   useEffect(() => {
     const orbit = new OrbitControls(camera, gl.domElement);
     orbit.enablePan = false;
-    orbit.enableZoom = false;
+    orbit.enableZoom = true;
+    orbit.zoomSpeed = 0.7;
+    orbit.minDistance = 8;
+    orbit.maxDistance = 18;
     orbit.enableDamping = true;
     orbit.dampingFactor = 0.07;
     orbit.minPolarAngle = Math.PI / 5;
@@ -451,7 +566,7 @@ function CameraControls({ reducedMotion }: { reducedMotion: boolean }) {
   return null;
 }
 
-function Scene({ active, strikeCount, strikeAnimationId, weather, reducedMotion }: SceneProps & { reducedMotion: boolean }) {
+function Scene({ active, strikeCount, strikeAnimationId, weather, landscape, reducedMotion }: SceneProps & { reducedMotion: boolean }) {
   const newestIndex = strikeCount > 0 ? (strikeCount - 1) % strikeLocations.length : -1;
   return <>
     <color attach="background" args={[weather === 'storm' ? '#b6c8d0' : weather === 'overcast' ? '#d5e2e4' : '#d9eff4']} />
@@ -459,7 +574,7 @@ function Scene({ active, strikeCount, strikeAnimationId, weather, reducedMotion 
     <ambientLight intensity={0.48} />
     <hemisphereLight args={['#dce9e6', '#5e7067', 0.95]} />
     <directionalLight position={[5, 9, 6]} intensity={weather === 'storm' ? 1.65 : 2.2} castShadow shadow-mapSize={[2048, 2048]} shadow-camera-left={-9} shadow-camera-right={9} shadow-camera-top={9} shadow-camera-bottom={-9} shadow-bias={-0.0002} />
-    <Surroundings weather={weather} />
+    <Surroundings weather={weather} landscape={landscape} />
     <Perimeter active={active} reducedMotion={reducedMotion} />
     <Plant />
     <Sky weather={weather} reducedMotion={reducedMotion} />
@@ -469,13 +584,16 @@ function Scene({ active, strikeCount, strikeAnimationId, weather, reducedMotion 
   </>;
 }
 
-function FallbackScene({ active, strikeCount, weather }: SceneProps) {
-  return <div className="cw-beacon-fallback" role="img" aria-label={`Illustrated plant in ${weather} conditions within a 10-mile perimeter; ${active ? 'demo stop-work' : 'demo all-clear'}; ${strikeCount} simulated ${strikeCount === 1 ? 'strike' : 'strikes'}`}>
+function FallbackScene({ active, strikeCount, weather, landscape }: Pick<SceneProps, 'active' | 'strikeCount' | 'weather' | 'landscape'>) {
+  return <div className="cw-beacon-fallback" role="img" aria-label={`Illustrated ${landscape} setting with plant in ${weather} conditions within a 10-mile perimeter; ${active ? 'demo stop-work' : 'demo all-clear'}; ${strikeCount} simulated ${strikeCount === 1 ? 'strike' : 'strikes'}`}>
     <svg viewBox="0 0 740 390" aria-hidden="true">
       <rect width="740" height="390" fill={weather === 'storm' ? '#b6c8d0' : weather === 'overcast' ? '#d5e2e4' : '#d9eff4'} />
       {weather === 'sunny' ? <circle cx="97" cy="78" r="38" fill="#ffd273" /> : <><ellipse cx="147" cy="70" rx="96" ry="24" fill="#849aa1" /><ellipse cx="221" cy="95" rx="92" ry="27" fill="#849aa1" />{weather === 'storm' && <path d="m135 97-11 35m31-35-11 35m70-11-11 35m31-35-11 35" stroke="#7faeba" strokeWidth="3" />}</>}
       <ellipse cx="370" cy="226" rx="305" ry="123" fill="#d9e8e9" />
       <ellipse cx="370" cy="226" rx="285" ry="107" fill={active ? '#f6e6e1' : '#e4f1e9'} stroke={active ? '#cd533b' : '#397d66'} strokeWidth="3" strokeDasharray="10 8" />
+      {landscape === 'river' && <path d="M85 205 C135 180 130 276 198 300 L170 344 C102 302 102 235 62 237Z" fill="#5c8991" stroke="#8ca89b" strokeWidth="7" />}
+      {landscape === 'wetland' && <><ellipse cx="148" cy="272" rx="48" ry="15" fill="#5c8991" /><ellipse cx="572" cy="260" rx="38" ry="12" fill="#5c8991" /></>}
+      {landscape === 'scrub' && <><ellipse cx="167" cy="286" rx="42" ry="12" fill="#b4a98a" /><ellipse cx="565" cy="248" rx="52" ry="15" fill="#b4a98a" /></>}
       <path d="M241 234 352 181 501 233 388 284Z" fill="#b4c8c5" stroke="#779b9b" strokeWidth="2" />
       <path d="M292 186 357 158 449 190 383 220Z" fill="#b5c8c8" stroke="#687e80" strokeWidth="2" />
       <path d="M292 186 383 220 383 277 292 243Z" fill="#667c7c" /><path d="M383 220 449 190 449 247 383 277Z" fill="#4d6364" />
@@ -487,18 +605,18 @@ function FallbackScene({ active, strikeCount, weather }: SceneProps) {
   </div>;
 }
 
-export function SiteBeaconScene({ active, strikeCount, strikeAnimationId, weather }: SceneProps) {
+export function SiteBeaconScene({ active, strikeCount, strikeAnimationId, weather, landscape }: SceneProps) {
   const reducedMotion = useReducedMotion();
   const [webglAvailable] = useState(canUseWebGL);
   const [contextLost, setContextLost] = useState(false);
   const canvasElement = useRef<HTMLCanvasElement | null>(null);
   const onContextLost = useCallback((event: Event) => { event.preventDefault(); setContextLost(true); }, []);
   useEffect(() => () => canvasElement.current?.removeEventListener('webglcontextlost', onContextLost), [onContextLost]);
-  const fallback = <FallbackScene active={active} strikeCount={strikeCount} strikeAnimationId={strikeAnimationId} weather={weather} />;
+  const fallback = <FallbackScene active={active} strikeCount={strikeCount} weather={weather} landscape={landscape} />;
   if (!webglAvailable || contextLost) return fallback;
   return <SceneErrorBoundary fallback={fallback}>
     <Canvas fallback={fallback} camera={{ position: [9, 7, 11], fov: 35, near: 0.1, far: 100 }} dpr={[1, 1.5]} shadows frameloop={reducedMotion ? 'demand' : 'always'} gl={{ antialias: true, alpha: false }} onCreated={({ gl }) => { canvasElement.current = gl.domElement; gl.domElement.addEventListener('webglcontextlost', onContextLost); }}>
-      <Scene active={active} strikeCount={strikeCount} strikeAnimationId={strikeAnimationId} weather={weather} reducedMotion={reducedMotion} />
+      <Scene active={active} strikeCount={strikeCount} strikeAnimationId={strikeAnimationId} weather={weather} landscape={landscape} reducedMotion={reducedMotion} />
     </Canvas>
   </SceneErrorBoundary>;
 }
