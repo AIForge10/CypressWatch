@@ -47,20 +47,20 @@ roles listed = only those roles; **open** = no token checked yet.
 |---|---|---|---|---|---|
 | GET | `/api/health` | public | | `{"ok": true}` | Everyone |
 | GET | `/api/me` | any | | `me.json` / `Me`; a `"*"` site claim is expanded to every site, role `owner` is returned as `project_owner` | M1, M2 |
-| GET | `/api/sites` | open | | `sites.json` / `SitesResponse`, ranked by hazard score | M1 (map, ranked list) |
+| GET | `/api/sites` | any | | `sites.json` / `SitesResponse`, ranked by hazard score | M1 (map, ranked list) |
 | GET | `/api/sites/summary` | any | | `{server_time, sites[]}`: compact per-site status for the dashboard (see above) | M1 |
-| GET | `/api/sites/{site_id}` | open | | `site_detail.json` / `SiteDetail` (score, factors, explanation, conditions, drift, days like today, storm approach) | M1, M2 |
-| GET | `/api/sites/{site_id}/history` | open | `?hours=48` | `site_history.json` / `SiteHistory`, hourly buckets | M1 (charts) |
-| GET | `/api/sites/{site_id}/insights` | open | | forecast drift + days like today + storm approach + stop-work + 7-day trend | M1 |
-| GET | `/api/scores` | open | `?day_offset=0\|1` (today / tomorrow) | latest score for every site, ranked | M1 |
-| GET | `/api/model` | open | | `model_card.json` / `ModelCard` | M1 (AI/ML spotlight) |
-| GET | `/api/tiger` | open | | live Tiger Data stats: hypertables, compression, aggregates, jobs | M1 (Tiger panel) |
+| GET | `/api/sites/{site_id}` | site | | `site_detail.json` / `SiteDetail` (score, factors, explanation, conditions, drift, days like today, storm approach) | M1, M2 |
+| GET | `/api/sites/{site_id}/history` | site | `?hours=48` | `site_history.json` / `SiteHistory`, hourly buckets | M1 (charts) |
+| GET | `/api/sites/{site_id}/insights` | site | | forecast drift + days like today + storm approach + stop-work + 7-day trend | M1 |
+| GET | `/api/scores` | any | `?day_offset=0\|1` (today / tomorrow) | latest score for every site, ranked | M1 |
+| GET | `/api/model` | any | | `model_card.json` / `ModelCard` | M1 (AI/ML spotlight) |
+| GET | `/api/tiger` | any | | live Tiger Data stats: hypertables, compression, aggregates, jobs | M1 (Tiger panel) |
 | GET | `/api/alerts` | any | `?status=active&site_id=` | `alerts.json` / `AlertsResponse` | M1, M2 |
 | POST | `/api/alerts/{alert_id}/acknowledge` | crew, supervisor | | `ack_response.json` | M2 |
 | POST | `/api/alerts/{alert_id}/override` | supervisor + signed `mfa_at` ≤ 5 min (else `401 step_up_required`) | `override_request.json` | `override_response.json` | M1 |
 | POST | `/api/demo/strike` | supervisor | `demo_strike_request.json` | strike queued; engine emits `stop_work_started` with `simulated: true` | M1 (demo button) |
 | POST | `/api/demo/flood-rain` | supervisor | `{site_id, overnight_in}` | `{flood_alert_expected, river_sites[]}`; flood rule raises `flood_risk` on its next tick, `simulated: true` | M1 (demo button) |
-| GET | `/api/sites/{site_id}/briefing` | open | `?date=YYYY-MM-DD&lang=en\|es` (no date = latest) | `briefing.json` / `Briefing` | M1, M2 |
+| GET | `/api/sites/{site_id}/briefing` | site | `?date=YYYY-MM-DD&lang=en\|es` (no date = latest) | `briefing.json` / `Briefing` | M1, M2 |
 | POST | `/api/reports` | open (crew app has no Auth0 token yet) | multipart: `photo` (JPEG/PNG, ≤ 15 MB) + `data` = `report_request.json` | `201` `report_created.json` / `Report` with Gemini `triage`. Same `client_id` again → `409 duplicate` + the existing report | M2 |
 | GET | `/api/reports` | supervisor, owner | `?status=pending_review\|confirmed\|dismissed\|all&limit=100` | `{server_time, status, reports[]}`: review queue across the caller's sites | M1 |
 | GET | `/api/reports/{report_id}` | site | | `Report` | M1, M2 |
@@ -101,7 +101,7 @@ Ledger by the scheduler (`workers/scheduler/anchor.py`); supervisor report decis
 
 ## Known gaps
 
-- Endpoints marked **open** above do not check the token yet. `POST /api/reports` stays open until the
-  crew app (DeepSpace sign-in) has an agreed token bridge to this API.
+- `POST /api/reports` is the only endpoint marked **open**: it stays open until the crew app (DeepSpace
+  sign-in) has an agreed token bridge to this API. Every other `/api/*` endpoint checks the token.
 - Errors raised through FastAPI's `HTTPException` (auth, alerts, simulate, ledger) come back wrapped as
   `{"detail": {...}}` instead of the plain error shape.
