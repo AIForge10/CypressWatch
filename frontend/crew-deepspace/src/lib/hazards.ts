@@ -19,3 +19,15 @@ export const LEVELS: Record<RiskLevel, { label: string; cls: string }> = {
   high: { label: 'High', cls: 'bg-danger-soft border-destructive/50 text-destructive' },
   extreme: { label: 'Extreme', cls: 'bg-destructive border-[#721c16] text-white' },
 }
+
+/** Spanish names, shown on the briefing when Spanish is chosen. */
+export const HAZARD_ES: Record<HazardKey, string> = {
+  lightning: 'Rayos',
+  heat: 'Calor',
+  storm: 'Tormenta',
+  flood: 'Inundación',
+  soil_saturation: 'Suelo mojado',
+  wildfire: 'Incendio forestal',
+  wildlife: 'Fauna silvestre',
+}
+export const LEVEL_ES: Record<RiskLevel, string> = { low: 'Bajo', moderate: 'Moderado', high: 'Alto', extreme: 'Extremo' }

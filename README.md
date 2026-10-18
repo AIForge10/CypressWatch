@@ -13,11 +13,11 @@ Built for **Sperry Tech PlanIT Control** at SwampHacks XII. The full plan is in 
 | You are | Go to | Setup |
 |---|---|---|
 | **M1** Frontend: Supervisor | [`frontend/`](frontend/README.md) → `frontend/supervisor/` | `./scripts/setup.sh frontend` |
-| **M2** Frontend: Crew | [`frontend/`](frontend/README.md) → `frontend/crew/` | `./scripts/setup.sh frontend` |
+| **M2** Frontend: Crew | [`frontend/crew-deepspace/`](frontend/crew-deepspace/START_HERE.md) | Follow the standalone crew setup guide |
 | **M3** AI/ML + Solana | [`backend/`](backend/README.md) → `backend/ml/`, `backend/ai/`, `backend/ledger/` | `./scripts/setup.sh backend` |
 | **M4** Backend / Platform | [`backend/`](backend/README.md) → `backend/api/`, `backend/workers/`, `backend/db/` | `./scripts/setup.sh backend` |
 
-Frontend members need **Node** only. Backend members need **conda + Docker**. Each half's README has the full
+Frontend members need **Node**; the crew app also needs a DeepSpace account. Backend members need **conda + Docker**. Each half's README has the full
 install guide, run commands, and troubleshooting.
 
 Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before your first PR (branches, ownership, shared files).
@@ -26,9 +26,9 @@ Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before your first PR (branches, owners
 
 ```
 CypressWatch/
-├── frontend/              M1 + M2   React apps (npm workspaces)
+├── frontend/              M1 + M2   React apps (separate installs)
 │   ├── supervisor/        M1   supervisor dashboard          → localhost:5173
-│   ├── crew/              M2   offline-first crew PWA        → localhost:5174
+│   ├── crew-deepspace/    M2   offline-first crew PWA        → DeepSpace dev URL
 │   └── packages/          ui (shared components), shared (API types)
 ├── backend/               M3 + M4   Python 3.11
 │   ├── api/               M4   FastAPI (one router file per owner)
@@ -47,12 +47,16 @@ CypressWatch/
 ```bash
 git clone https://github.com/AIForge10/CypressWatch && cd CypressWatch
 
-# Frontend (M1, M2)
+# Supervisor frontend (M1)
 nvm install 20 && nvm use 20
 ./scripts/setup.sh frontend
-cd frontend && npm run dev:web
+cd frontend && npm run dev:supervisor
+
+# Crew frontend (M2): separate terminal, Node 22.15+ and npm 11.6+
+# Follow frontend/crew-deepspace/START_HERE.md for DeepSpace login and dev start.
 
 # Backend (M3, M4)
+cd ..
 cd backend && conda env create -f environment.yml && conda activate cypresswatch && cd ..
 ./scripts/setup.sh backend
 cd backend/api && uvicorn app.main:app --reload        # http://localhost:8000/docs
@@ -148,6 +152,39 @@ area", "1.9 inches"). The briefing runs once per site in the background at 6 PM,
 for quality, and Flash for the high-volume explanations and for photo triage, where speed matters.
 
 **Solana devnet wallet:** `7J888M9EHynGgFTiWc9iSCbb5Nc89r1gGGMskhJv4bYp` · [all transactions](https://explorer.solana.com/address/<your address>?cluster=devnet)
+
+## Tiger Data (TimescaleDB) — the timeline behind every safety decision
+
+Safety depends on time: what is happening now, how the forecast is changing, whether a storm is
+approaching, and what happened on days like today. CypressWatch keeps all of it in one Tiger Data service.
+
+| Feature | Tiger Data capability | What the user sees |
+|---|---|---|
+| Live weather, forecasts, risk scores, lightning strikes for 60 sites every 15 min | **Hypertables** (1-day chunks) | Fast "last 48 hours" views |
+| Hourly risk and weather charts | **Continuous aggregates** (real-time, auto-refresh every 15 min) | Dashboard trend charts with no batch jobs |
+| Every forecast run kept, not overwritten | Time-series history of forecasts | **Forecast drift**: "10 PM rain chance rose from 44% to 69% since 6 AM" |
+| 10 years of history (188,448 site-days, 2015–2024) | **Compression** (42 MB → 18 MB, 57% smaller) | Decade of history in the same database as live data |
+| "Days like today" | **pgvector** (HNSW index) on 12-number weather fingerprints | "3 of the 10 most similar past days had flooding or high winds within 25 miles — 4× the usual rate" |
+| Storm approach warning | `time_bucket` + `regr_slope` in SQL over the last 30 min of strikes | "Lightning 14 mi SW, moving in at ~15 mph — reaches the 10-mile stop-work line in ~16 min" |
+| Lightning stop-work rule | Haversine distance query in SQL | Any strike within 10 mi → stop work until 30 min after the last strike |
+| Storage stays small | **Compression policies** (after 7 days) and **retention policies** (forecasts 30 days, strikes 90 days) | No cleanup code |
+
+**Tables:** `weather_obs`, `forecast_hourly`, `site_scores`, `lightning_strikes` (hypertables),
+`weather_history` (compressed hypertable, 10 years), `history_vectors` (pgvector), `site_risk_hourly` and
+`weather_hourly` (continuous aggregates), plus `sites`, `briefings`, `reports`, `site_analogs`.
+
+**Why it matters:** the AI risk score says *how risky* today is. Tiger Data adds *how it is changing*
+(forecast drift, storm approach) and *what happened before* (days like today), so supervisors can trust
+and act on the warning.
+
+**Run it:**
+
+    python backend/db/cypress_db/db.py setup           # schema, hypertables, aggregates, policies
+    python backend/db/cypress_db/db.py load --archive  # sites, weather runs, scores, briefings
+    python backend/db/cypress_db/history.py load       # 10-year history + compression + vectors
+    python backend/db/cypress_db/history.py refresh    # days like today for every site
+    python backend/db/cypress_db/storm.py simulate <site_id>   # demo: approaching storm + ETA
+    python backend/db/cypress_db/db.py check           # what the API will serve
 
 ## License
 

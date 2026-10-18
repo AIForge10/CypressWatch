@@ -5,7 +5,7 @@
 # M1 — Supervisor (Easy On The Eyes, Auth0, Domain)
 /frontend/supervisor/                        @M1
 # M2 — Crew (DeepSpace, Hardware)
-/frontend/crew/                              @M2
+/frontend/crew-deepspace/                    @M2
 # Shared by both frontend members
 /frontend/packages/ui/                       @M1 @M2
 /frontend/package.json                       @M1 @M2

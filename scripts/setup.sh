@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-shot setup after cloning. Run from the repo root:
-#   ./scripts/setup.sh frontend   # M1, M2  (needs Node only)
+#   ./scripts/setup.sh frontend   # supervisor + shared packages (needs Node only)
 #   ./scripts/setup.sh backend    # M3, M4  (run `conda activate cypresswatch` first)
 #   ./scripts/setup.sh            # both
 set -euo pipefail
@@ -8,11 +8,10 @@ cd "$(dirname "$0")/.."
 PART="${1:-all}"
 
 if [[ "$PART" == frontend || "$PART" == all ]]; then
-  echo "→ Frontend: npm install (supervisor, crew, shared packages)"
+  echo "→ Frontend: npm install (supervisor and shared packages)"
   (cd frontend && npm install)
-  for app in frontend/supervisor frontend/crew; do
-    [ -f "$app/.env.local" ] || cp "$app/.env.example" "$app/.env.local"
-  done
+  [ -f frontend/supervisor/.env.local ] || cp frontend/supervisor/.env.example frontend/supervisor/.env.local
+  echo "  Crew app is separate: see frontend/crew-deepspace/START_HERE.md"
 fi
 
 if [[ "$PART" == backend || "$PART" == all ]]; then

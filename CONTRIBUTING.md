@@ -5,7 +5,7 @@
 | Team | Member | Owns |
 |---|---|---|
 | **Frontend** | **M1** Supervisor | `frontend/supervisor/`, `backend/api/app/auth/` (Auth0 middleware) |
-| | **M2** Crew | `frontend/crew/`, `backend/api/app/routers/reports.py` (upload endpoint), `hardware/` |
+| | **M2** Crew | `frontend/crew-deepspace/`, `backend/api/app/routers/reports.py` (upload endpoint), `hardware/` |
 | | M1 + M2 | `frontend/packages/ui/` (shared components + colors) |
 | **Backend** | **M3** AI/ML + Solana | `backend/ml/`, `backend/ai/`, `backend/ledger/`, routers `scores.py`, `briefings.py`, `ledger.py` |
 | | **M4** Platform | everything else in `backend/` (api, workers, db, data), `docs/api-contract.md`, `frontend/packages/shared/` |
@@ -27,14 +27,14 @@ message them first.
 | `docs/api-contract.md` + `frontend/packages/shared/src` | **The only bridge between frontend and backend.** Agree on an endpoint here first; frontend mocks it while backend builds it. M4 merges changes. |
 | `backend/api/app/main.py` | Every router is pre-registered. Add endpoints in **your router file**, don't edit `main.py`. |
 | `backend/requirements.txt` | Only `-r` includes. Add Python packages to **your area's** `requirements.txt`. |
-| `frontend/package.json` | Add JS packages to your app: `cd frontend && npm install <pkg> -w @cypresswatch/crew`. |
-| `frontend/package-lock.json` | On conflict don't hand-merge: `git checkout --theirs frontend/package-lock.json && (cd frontend && npm install)`, then commit. |
+| `frontend/package.json` | Supervisor/shared packages use the root npm workspace. The crew app has its own manifest and lockfile: install crew packages from `frontend/crew-deepspace/`. |
+| `frontend/package-lock.json` | On conflict, resolve the manifest first, then regenerate the lockfile with `npm install --package-lock-only` in `frontend/`. Crew has a separate lockfile. |
 | `backend/db/migrations/` | New file per change, named with a UTC timestamp (`20261017T0130_add_alerts.sql`). Never edit a merged migration. |
 | `frontend/packages/ui/` | M1 + M2 agree before changing tokens or a shared component's props. |
 
 ## 4. Secrets
 
-- Each app/service has its own `.env.example`. Copy it to `.env` (`.env.local` for the frontend apps) and fill it in.
+- Follow each app/service's own environment instructions. The supervisor uses `.env.local`; the standalone crew app documents its `.env` in `frontend/crew-deepspace/START_HERE.md`.
 - Real keys go in the team password manager or DM, **never** in git, Devpost, or screenshots.
 - Solana keypairs stay in `~/.config/solana/`, never in the repo.
 
