@@ -5,15 +5,15 @@ import { HAZARDS, LEVELS } from '../lib/hazards'
 import { cn } from '../lib/utils'
 
 /** Page header copies the supervisor's PageHeader: small green eyebrow, big tight title, optional description. */
-export function Screen({ title, eyebrow = 'Crew workspace', description, children }: { title: string; eyebrow?: string; description?: string; children: ReactNode }) {
+export function Screen({ title, eyebrow = 'Crew workspace', description, columns = false, children }: { title: string; eyebrow?: string; description?: string; /** Two columns on wide screens (cards may add `xl:col-span-2` to span both). */ columns?: boolean; children: ReactNode }) {
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-4 px-4 py-5">
+    <div className={cn('mx-auto flex w-full flex-col gap-4 px-4 py-5 sm:px-6 lg:px-8 lg:py-8', columns ? 'max-w-[1400px]' : 'max-w-3xl')}>
       <header className="mb-1">
         <p className="mb-1.5 text-[13px] font-bold uppercase tracking-[0.1em] text-primary">{eyebrow}</p>
         <h1 className="text-[clamp(25px,7vw,32px)] font-extrabold leading-tight tracking-[-0.035em]">{title}</h1>
         {description && <p className="mt-2 leading-relaxed text-muted-foreground">{description}</p>}
       </header>
-      {children}
+      <div className={columns ? 'grid items-start gap-4 xl:grid-cols-2' : 'flex flex-col gap-4'}>{children}</div>
     </div>
   )
 }

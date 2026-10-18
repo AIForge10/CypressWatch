@@ -86,15 +86,15 @@ export default function ReportPage() {
   }
 
   return (
-    <Screen title="Report a hazard" eyebrow="Tell your supervisor">
+    <Screen columns title="Report a hazard" eyebrow="Tell your supervisor">
       {done && (
-        <p role="status" data-testid="report-done" className="flex items-start gap-2 rounded-xl border border-success bg-success-soft p-4 text-lg font-bold">
+        <p role="status" data-testid="report-done" className="xl:col-span-2 flex items-start gap-2 rounded-xl border border-success bg-success-soft p-4 text-lg font-bold">
           {done === 'sent' ? <CircleCheck className="mt-0.5 h-6 w-6 shrink-0" aria-hidden /> : <Clock className="mt-0.5 h-6 w-6 shrink-0" aria-hidden />}
           {done === 'sent' ? 'Report sent to your team.' : 'Saved on this phone. It uploads on its own when signal returns.'}
         </p>
       )}
 
-      <Card>
+      <Card className="xl:row-span-2">
         <h2 className="mb-2 text-lg font-bold">1. Photo</h2>
         <input ref={fileRef} type="file" accept="image/*" capture="environment" className="sr-only" aria-label="Take or choose a photo" data-testid="photo-input" onChange={(e) => { setPhoto(e.target.files?.[0] ?? null); setDone(null) }} />
         {preview && <img src={preview} alt="Photo of the hazard you will report" className="mb-3 max-h-64 w-full rounded-lg object-cover" />}
@@ -140,14 +140,14 @@ export default function ReportPage() {
         </p>
       </Card>
 
-      {problem && <p role="alert" className="rounded-lg border-2 border-destructive bg-card p-3 text-base font-bold text-destructive">{problem}</p>}
-      <BigButton data-testid="send-report" disabled={busy} onClick={() => void send()}>
+      {problem && <p role="alert" className="xl:col-span-2 rounded-lg border-2 border-destructive bg-card p-3 text-base font-bold text-destructive">{problem}</p>}
+      <BigButton className="xl:col-span-2" data-testid="send-report" disabled={busy} onClick={() => void send()}>
         {busy ? 'Saving...' : online ? 'Send report' : 'Save report (no signal)'}
       </BigButton>
-      {!online && <p className="text-base">No signal. The report is saved on this phone and uploads on its own when signal returns.</p>}
+      {!online && <p className="text-base xl:col-span-2">No signal. The report is saved on this phone and uploads on its own when signal returns.</p>}
 
       {queue.length > 0 && (
-        <Card>
+        <Card className="xl:col-span-2">
           <h2 className="mb-2 text-lg font-bold">Waiting to upload ({queue.length})</h2>
           <ul className="flex flex-col gap-2 text-base">
             {queue.map((q) => (

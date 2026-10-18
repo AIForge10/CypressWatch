@@ -15,8 +15,8 @@ export default function BriefingPage() {
   }
   const win = briefing.best_work_window
   return (
-    <Screen title="Tomorrow's briefing" eyebrow="Plan ahead">
-      <Card>
+    <Screen columns title="Tomorrow's briefing" eyebrow="Plan ahead">
+      <Card className="xl:col-span-2">
         <div className="flex items-start justify-between gap-3">
           <div className="text-sm font-bold">{dayLabel(briefing.for_date)}</div>
           <LevelBadge level={briefing.risk_level} />
@@ -64,7 +64,7 @@ export default function BriefingPage() {
           Written {clock(briefing.generated_at, tz)} {tzAbbrev(tz)}. {briefing.validated ? 'Checked against its sources.' : 'Not yet checked against its sources.'} Saved on this phone, so it works without signal.
         </p>
       </Card>
-      <p className="text-sm leading-relaxed">{briefing.disclaimer}</p>
+      <p className="text-sm leading-relaxed xl:col-span-2">{briefing.disclaimer}</p>
     </Screen>
   )
 }

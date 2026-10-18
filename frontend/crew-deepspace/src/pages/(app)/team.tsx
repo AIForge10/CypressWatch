@@ -52,16 +52,16 @@ export default function TeamPage() {
   }
 
   return (
-    <Screen title="Team" eyebrow="Admin" description="Choose the site each person works at. They see only that site.">
+    <Screen columns title="Team" eyebrow="Admin" description="Choose the site each person works at. They see only that site.">
       {!online && <Message>No signal. You can assign sites once you are back online.</Message>}
-      {note && <p role="status" data-testid="team-saved" className="mb-3 rounded-lg bg-secondary px-3 py-2 text-base font-bold">{note}</p>}
-      {err && <p role="alert" className="mb-3 rounded-lg bg-caution px-3 py-2 text-base font-bold">{err}</p>}
+      {note && <p role="status" data-testid="team-saved" className="xl:col-span-2 mb-3 rounded-lg bg-secondary px-3 py-2 text-base font-bold">{note}</p>}
+      {err && <p role="alert" className="xl:col-span-2 mb-3 rounded-lg bg-caution px-3 py-2 text-base font-bold">{err}</p>}
       {!usersLoaded ? (
         <p role="status" className="text-lg">Loading people...</p>
       ) : users.length === 0 ? (
         <Card><p className="text-lg">Nobody has signed in yet.</p></Card>
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid gap-3 xl:col-span-2 xl:grid-cols-2">
           {users.map((u) => {
             const current = rowByUser.get(u.id)?.data.site_id ?? ''
             return (

@@ -238,3 +238,25 @@
     touch-action: manipulation;
   }
 }
+
+/* Site view (3D scene from the supervisor app) */
+.cw-beacon-tag { position: absolute; padding: 4px 8px; border: 1px solid rgb(53 53 49 / 10%); border-radius: 8px; color: #17201c; background: rgb(255 255 255 / 90%); font-size: 12px; font-weight: 700; pointer-events: none; }
+.cw-beacon-fallback { position: relative; display: grid; width: 100%; height: 100%; place-items: center; }
+.cw-beacon-fallback svg { display: block; width: 100%; height: auto; max-height: 100%; }
+.cw-beacon-fallback-note { position: absolute; bottom: 8px; right: 8px; padding: 3px 8px; border-radius: 999px; color: #17201c; background: rgb(255 255 255 / 85%); font-size: 12px; }
+.cw-beacon-scene canvas, [aria-label^="3D view"] canvas { display: block; touch-action: pan-y !important; }
+
+/* Street map (same look as the supervisor app's map) */
+.cw-interactive-map .maplibregl-map, .cw-interactive-map.maplibregl-map { background: #dfecef; }
+.cw-interactive-map .maplibregl-canvas { filter: saturate(.62) sepia(.06) hue-rotate(145deg) contrast(.94) brightness(1.06); }
+.cw-interactive-map .maplibregl-ctrl-group { overflow: hidden; border: 1px solid #d7e0da; border-radius: 8px; box-shadow: 0 1px 3px rgb(0 0 0 / 15%); }
+.cw-interactive-map .maplibregl-ctrl-group button { width: 40px; height: 40px; color: #0d4433; background: #fff; }
+.cw-interactive-map .maplibregl-ctrl-attrib { color: #0d4433; background: rgb(255 255 255 / 82%); }
+.cw-map-marker { display: grid; place-items: center; padding: 0; border: 3px solid #fff; border-radius: 50%; color: #fff; box-shadow: 0 3px 8px rgb(53 53 49 / 28%); cursor: pointer; font-size: 12px; font-weight: 800; }
+.cw-map-marker-danger { background: #b42318; }
+.cw-map-marker-warning { background: #9a6700; }
+.cw-map-marker-success { background: #1f7a4f; }
+.cw-map-pin { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 2px solid #fff; border-radius: 50%; color: #fff; background: #b42318; box-shadow: 0 2px 6px rgb(0 0 0 / 35%); cursor: pointer; font-size: 14px; font-weight: 800; }
+.cw-map-pin-waiting { border: 3px dashed #b42318; color: #b42318; background: #fff; }
+.cw-map-popup { display: grid; gap: 4px; min-width: 150px; color: #17201c; font-size: 14px; }
+.cw-map-popup strong { font-size: 15px; }
