@@ -5,7 +5,8 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { AlertTriangle, Camera, Clock, FileText, LogIn, LogOut, Map, Users, Wifi, WifiOff, Zap } from 'lucide-react'
+import { AlertTriangle, Camera, Clock, FileText, LogIn, LogOut, Map, Sun, Users, Wifi, WifiOff, Zap } from 'lucide-react'
+import { useSunlight } from '../lib/sunlight'
 import { useAssignment } from '../lib/assignment'
 import { cn } from '../lib/utils'
 import { describeAge, isStale, useFreshness } from '../lib/freshness'
@@ -40,6 +41,21 @@ export default function CrewShell({ children, access }: { children: ReactNode; a
 }
 
 function Header({ access }: { access: Access }) {
+  const [sun, toggleSun] = useSunlight()
+  const sunButton = (
+    <button
+      type="button"
+      data-testid="sunlight-toggle"
+      aria-pressed={sun}
+      aria-label="Sunlight mode"
+      title="Sunlight mode: high contrast for bright light"
+      onClick={toggleSun}
+      className={cn('flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-bold', sun ? 'border-white bg-white text-brand-strong' : 'border-[#306b55] text-[#cfe5da] hover:bg-[#1d684f]')}
+    >
+      <Sun className="h-5 w-5" aria-hidden />
+      <span className="hidden sm:inline">{sun ? 'Sunlight on' : 'Sunlight'}</span>
+    </button>
+  )
   return (
     <header
       data-testid="app-navigation"
@@ -54,6 +70,7 @@ function Header({ access }: { access: Access }) {
       </div>
       {access.allowed ? (
         <div className="flex min-w-0 items-center gap-3">
+          {sunButton}
           <div className="min-w-0 text-right text-sm leading-tight">
             <div data-testid="nav-user-name" className="truncate font-bold">{access.name ?? access.email}</div>
             <div data-testid="nav-user-email" className="truncate text-[#abcbbd]">{access.email}</div>

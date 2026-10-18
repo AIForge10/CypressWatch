@@ -25,18 +25,19 @@ export function Card({ children, className }: { children: ReactNode; className?:
 const LEVEL_ICON: Record<RiskLevel, LucideIcon> = { low: CircleCheck, moderate: CircleAlert, high: AlertTriangle, extreme: ShieldAlert }
 
 /** Level as icon + word. Never color alone. */
-export function LevelBadge({ level }: { level: RiskLevel }) {
+export function LevelBadge({ level, label }: { level: RiskLevel; label?: string }) {
   const Icon = LEVEL_ICON[level]
   return (
     <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold', LEVELS[level].cls)}>
       <Icon className="h-4 w-4" aria-hidden />
-      {LEVELS[level].label}
+      {label ?? LEVELS[level].label}
     </span>
   )
 }
 
-export function HazardName({ hazard, className }: { hazard: HazardKey; className?: string }) {
-  const { label, Icon } = HAZARDS[hazard]
+export function HazardName({ hazard, className, label: labelOverride }: { hazard: HazardKey; className?: string; label?: string }) {
+  const { label: english, Icon } = HAZARDS[hazard]
+  const label = labelOverride ?? english
   return (
     <span className={cn('inline-flex items-center gap-2 font-bold', className)}>
       <Icon className="h-5 w-5" aria-hidden />
