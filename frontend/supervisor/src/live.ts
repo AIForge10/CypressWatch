@@ -117,6 +117,15 @@ export const live = {
       body: JSON.stringify({ site_id: siteId, distance_miles: distanceMiles }),
     }),
 
+  // Simulated heavy-rain night: the flood rule raises flood_risk alerts on river sites
+  // (river flag / FEMA zone / near a USGS gauge) on its next flood tick. Simulated: true.
+  demoHeavyRain: (siteId: string, overnightIn = 4.5) =>
+    call<{ flood_alert_expected: boolean; river_sites: { site_id: string; name: string }[] }>(
+      '/api/demo/flood-rain', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ site_id: siteId, overnight_in: overnightIn }),
+    }),
+
   ledgerRecords: () => call<{ records: LedgerRecord[] }>('/api/ledger/records'),
 
   verify: (recordId: string) =>
