@@ -503,17 +503,17 @@ function VerifyPage() {
     {error && <Card><p style={{ margin: 0, color: '#8b332c' }}>Live ledger unavailable: {error}</p></Card>}
     <Card>
       <div className="cw-section-heading"><h2>Recent records</h2><span className="cw-muted">{list?.length ?? '…'} most recent</span></div>
-      {!list && <p className="cw-muted">Loading records…</p>}
-      <div id="cw-verify-list" style={{ display: 'grid', gap: 10 }}>
+      <div id="cw-verify-list" className="cw-verify-list">
+        {!list && !error && <p className="cw-muted">Loading records…</p>}
         {list?.map((record) => {
           const result = records?.[record.record_id];
-          return <div key={record.record_id} className="cw-factor" style={{ alignItems: 'center' }}>
+          return <div key={record.record_id} className="cw-factor">
             <div>
               <p className="cw-factor-label">{record.record_id} · {record.record_type} · {record.site_id}</p>
               <p className="cw-factor-meta">{record.created_at} · {record.anchored ? `root ${record.merkle_root?.slice(0, 16)}…` : 'waiting for the next hourly anchor'}</p>
               {result && <p className="cw-factor-meta" style={{ color: result.verified ? '#1a7f37' : '#8b332c' }}>{result.message}{result.explorer_url && <> · <a href={result.explorer_url} target="_blank" rel="noreferrer">explorer</a></>}</p>}
             </div>
-            <Button variant="quiet" disabled={busy === record.record_id} onClick={() => check(record.record_id)}>{busy === record.record_id ? 'Verifying…' : 'Verify'}</Button>
+            <Button variant="secondary" disabled={busy === record.record_id} onClick={() => check(record.record_id)}>{busy === record.record_id ? 'Verifying…' : 'Verify'}</Button>
           </div>;
         })}
         {list?.length === 0 && <p className="cw-muted">No ledger records yet — they appear once the engine emits safety events and the scheduler anchors them.</p>}
