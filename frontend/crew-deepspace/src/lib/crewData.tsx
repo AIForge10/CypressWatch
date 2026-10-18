@@ -32,6 +32,7 @@ interface Snapshot {
   detail: SiteDetail
   alerts: Alert[]
   briefing: Briefing | null
+  briefingEs?: Briefing | null // older saved copies don't have it
   reports: Report[]
   /** server_time minus the phone's clock, so the countdown is right even if the phone clock is off. */
   serverOffsetMs: number
@@ -86,9 +87,12 @@ async function fetchSnapshot(sharedStart?: number, assignedSite?: string | null)
   if (!siteId) throw { error: 'forbidden', message: 'No site is assigned to you yet.', request_id: 'local' } satisfies ApiError
   const fetchId = USE_MOCKS ? SAMPLE_SITE : siteId
   const [detail, allAlerts, reportsRes] = await Promise.all([api.site(fetchId), api.alerts(), api.reports(fetchId)])
-  const briefing = await api.briefing(fetchId, tomorrowAt(detail.site.timezone)).catch(() => null)
+  const day = tomorrowAt(detail.site.timezone)
+  const briefing = await api.briefing(fetchId, day).catch(() => null)
+  // Fetch the Spanish copy too (when offered) so the language switch works with no signal.
+  const briefingEs = briefing?.available_languages?.includes('es') ? await api.briefing(fetchId, day, 'es').catch(() => null) : null
 
-  let data = { me, detail, alerts: allAlerts.alerts.filter((a) => a.site_id === fetchId), briefing, reports: reportsRes.reports }
+  let data = { me, detail, alerts: allAlerts.alerts.filter((a) => a.site_id === fetchId), briefing, briefingEs, reports: reportsRes.reports }
   if (USE_MOCKS) data = await asAssignedSite(data, siteId)
   let serverOffsetMs = Date.parse(detail.server_time) - Date.now()
   if (USE_MOCKS) {
@@ -162,6 +166,8 @@ interface CrewValue {
   me: Me | null
   detail: SiteDetail | null
   briefing: Briefing | null
+  /** The same briefing written in Spanish, when the server has one. */
+  briefingEs: Briefing | null
   reports: Report[]
   alerts: Alert[]
   /** The active lightning stop-work alert, if any. */
@@ -441,6 +447,7 @@ export function CrewDataProvider({ children, enabled, identity, assignedSite = n
       me: snap?.me ?? null,
       detail: snap?.detail ?? null,
       briefing: snap?.briefing ?? null,
+      briefingEs: snap?.briefingEs ?? null,
       reports: mergeReports([...(snap?.reports ?? []), ...others], localReports),
       alerts,
       activeAlert,
