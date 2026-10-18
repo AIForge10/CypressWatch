@@ -21,7 +21,6 @@ if [[ "$PART" == frontend || "$PART" == all ]]; then
   else bad "node missing"; fi
   [ -d frontend/node_modules/@cypresswatch/ui ] && ok "npm packages installed" || bad "run: cd frontend && npm install"
   envf frontend/supervisor/.env.local
-  envf frontend/crew/.env.local
 fi
 
 if [[ "$PART" == backend || "$PART" == all ]]; then

@@ -13,11 +13,11 @@ Built for **Sperry Tech PlanIT Control** at SwampHacks XII. The full plan is in 
 | You are | Go to | Setup |
 |---|---|---|
 | **M1** Frontend: Supervisor | [`frontend/`](frontend/README.md) → `frontend/supervisor/` | `./scripts/setup.sh frontend` |
-| **M2** Frontend: Crew | [`frontend/`](frontend/README.md) → `frontend/crew/` | `./scripts/setup.sh frontend` |
+| **M2** Frontend: Crew | [`frontend/crew-deepspace/`](frontend/crew-deepspace/START_HERE.md) | Follow the standalone crew setup guide |
 | **M3** AI/ML + Solana | [`backend/`](backend/README.md) → `backend/ml/`, `backend/ai/`, `backend/ledger/` | `./scripts/setup.sh backend` |
 | **M4** Backend / Platform | [`backend/`](backend/README.md) → `backend/api/`, `backend/workers/`, `backend/db/` | `./scripts/setup.sh backend` |
 
-Frontend members need **Node** only. Backend members need **conda + Docker**. Each half's README has the full
+Frontend members need **Node**; the crew app also needs a DeepSpace account. Backend members need **conda + Docker**. Each half's README has the full
 install guide, run commands, and troubleshooting.
 
 Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before your first PR (branches, ownership, shared files).
@@ -26,9 +26,9 @@ Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before your first PR (branches, owners
 
 ```
 CypressWatch/
-├── frontend/              M1 + M2   React apps (npm workspaces)
+├── frontend/              M1 + M2   React apps (separate installs)
 │   ├── supervisor/        M1   supervisor dashboard          → localhost:5173
-│   ├── crew/              M2   offline-first crew PWA        → localhost:5174
+│   ├── crew-deepspace/    M2   offline-first crew PWA        → DeepSpace dev URL
 │   └── packages/          ui (shared components), shared (API types)
 ├── backend/               M3 + M4   Python 3.11
 │   ├── api/               M4   FastAPI (one router file per owner)
@@ -47,12 +47,16 @@ CypressWatch/
 ```bash
 git clone https://github.com/AIForge10/CypressWatch && cd CypressWatch
 
-# Frontend (M1, M2)
+# Supervisor frontend (M1)
 nvm install 20 && nvm use 20
 ./scripts/setup.sh frontend
-cd frontend && npm run dev:web
+cd frontend && npm run dev:supervisor
+
+# Crew frontend (M2): separate terminal, Node 22.15+ and npm 11.6+
+# Follow frontend/crew-deepspace/START_HERE.md for DeepSpace login and dev start.
 
 # Backend (M3, M4)
+cd ..
 cd backend && conda env create -f environment.yml && conda activate cypresswatch && cd ..
 ./scripts/setup.sh backend
 cd backend/api && uvicorn app.main:app --reload        # http://localhost:8000/docs

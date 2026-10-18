@@ -11,6 +11,8 @@ import './app.css';
 import '@cypresswatch/ui/tokens.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
+const crewAppUrl = import.meta.env.VITE_CREW_APP_URL || 'https://cypresswatch-crew.app.space/';
+
 const floridaMapStyle: StyleSpecification = {
   version: 8,
   sources: {
@@ -45,7 +47,7 @@ function AppShell() {
       <div className="cw-nav-label">Operations</div>
       <nav className="cw-nav" aria-label="Primary navigation">
         {user?.role === 'supervisor' && <><NavLink to="/app/supervisor" end>Overview</NavLink><NavLink to="/app/supervisor/briefings">Briefings</NavLink><NavLink to="/app/supervisor/verify">Safety Ledger / Verify</NavLink></>}
-        {user?.role === 'crew' && <><NavLink to="/app/crew" end>My Site</NavLink><NavLink to="/app/crew/site">Briefing</NavLink><NavLink to="/app/crew/report">Report Hazard</NavLink></>}
+        {user?.role === 'crew' && <NavLink to="/app/crew">Crew app</NavLink>}
         {user?.role === 'owner' && <><NavLink to="/app/owner" end>Sites</NavLink><NavLink to="/app/owner/sites/demo/history">Safety History</NavLink><NavLink to="/app/owner/verify">Verify Records</NavLink></>}
       </nav>
       <div className="cw-sidebar-footer">Decisions are backed by measured data, forecasts, and a verifiable safety record.</div>
@@ -351,6 +353,8 @@ function SiteDetail() {
 }
 function Placeholder({ title, description }: { title: string; description: string }) { return <><PageHeader eyebrow="Placeholder destination" title={title} description={description} /><Card><div style={{ padding: 24 }}><p style={{ margin: 0, color: 'var(--cw-muted)' }}>This route is available for navigation and will be built in a later slice.</p></div></Card></>; }
 
+function CrewAppHandoff() { return <><PageHeader eyebrow="Crew workspace" title="Open the crew app" description="The crew experience runs in a separate DeepSpace app." /><Card><div style={{ padding: 24 }}><p>Use the crew app for your site status, briefings, and hazard reports. It has its own sign-in; your Auth0 session here will not sign you in there.</p><a className="cw-button cw-button-primary" href={crewAppUrl}>Open crew app</a></div></Card></>; }
+
 function VerifyPage() {
   const [records, setRecords] = useState<Record<string, Awaited<ReturnType<typeof live.verify>>> | null>(null);
   const [list, setList] = useState<Awaited<ReturnType<typeof live.ledgerRecords>>['records'] | null>(null);
@@ -388,7 +392,7 @@ function VerifyPage() {
     </Card>
   </div>;
 }
-function Login() { const { login, isMockAuth, isAuthenticated } = useAuth(); const navigate = useNavigate(); useEffect(() => { if (isAuthenticated) navigate('/app', { replace: true }); }, [isAuthenticated, navigate]); return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24, background: 'var(--cw-subtle)' }}><Card><div style={{ width: 'min(440px, 80vw)', padding: 32 }}><p className="cw-eyebrow">CypressWatch</p><h1 style={{ margin: '0 0 10px' }}>Sign in to safety operations</h1><p style={{ color: 'var(--cw-muted)', lineHeight: 1.5 }}>{isMockAuth ? 'Auth0 is not configured, so local demo authentication is active.' : 'Sign in with your CypressWatch Auth0 account.'}</p><Button onClick={() => { login(); if (isMockAuth) navigate('/app'); }}>{isMockAuth ? 'Continue as supervisor demo' : 'Continue with Auth0'}</Button><p style={{ margin: '18px 0 0', color: 'var(--cw-muted)', fontSize: 12 }}>{isMockAuth ? 'Demo mode · supervisor@example.com' : 'Production authentication · Auth0'}</p></div></Card></div>; }
+function Login() { const { login, isMockAuth, isAuthenticated } = useAuth(); const navigate = useNavigate(); useEffect(() => { if (isAuthenticated) navigate('/app', { replace: true }); }, [isAuthenticated, navigate]); return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24, background: 'var(--cw-subtle)' }}><Card><div style={{ width: 'min(440px, 80vw)', padding: 32 }}><p className="cw-eyebrow">CypressWatch</p><h1 style={{ margin: '0 0 10px' }}>Sign in to safety operations</h1><p style={{ color: 'var(--cw-muted)', lineHeight: 1.5 }}>{isMockAuth ? 'Auth0 is not configured, so local demo authentication is active.' : 'Sign in with your CypressWatch Auth0 account.'}</p><Button onClick={() => { login(); if (isMockAuth) navigate('/app'); }}>{isMockAuth ? 'Continue as supervisor demo' : 'Continue with Auth0'}</Button><p style={{ margin: '18px 0 0', color: 'var(--cw-muted)', fontSize: 12 }}>{isMockAuth ? 'Demo mode · supervisor@example.com' : 'Production authentication · Auth0'}</p><p style={{ margin: '18px 0 0', fontSize: 13 }}>Crew member? <a href={crewAppUrl}>Open the separate crew app</a>.</p></div></Card></div>; }
 function AuthCallback() {
   const { search } = useLocation();
   const params = new URLSearchParams(search);
@@ -402,7 +406,7 @@ createRoot(document.getElementById('root')!).render(<StrictMode><BrowserRouter><
   <Route path="/login" element={<Login />} />
   <Route element={<RequireAuth />}><Route path="/app" element={<AppShell />}><Route index element={<RoleHomeRedirect />} />
     <Route element={<RequireRole role="supervisor" />}><Route path="supervisor" element={<SupervisorHome />} /><Route path="supervisor/sites" element={<SupervisorHome />} /><Route path="supervisor/sites/:siteId" element={<SiteDetail />} /><Route path="supervisor/briefings" element={<Placeholder title="Briefings" description="Prepare and review the latest safety briefings." />} /><Route path="supervisor/verify" element={<VerifyPage />} /></Route>
-    <Route element={<RequireRole role="crew" />}><Route path="crew" element={<Placeholder title="My site" description="Crew-facing site status and stop-work information." />} /><Route path="crew/site" element={<Placeholder title="Briefing" description="The latest field briefing for the assigned site." />} /><Route path="crew/report" element={<Placeholder title="Report hazard" description="Submit a hazard report when the crew experience is connected." />} /></Route>
+    <Route element={<RequireRole role="crew" />}><Route path="crew" element={<CrewAppHandoff />} /><Route path="crew/site" element={<Navigate to="/app/crew" replace />} /><Route path="crew/report" element={<Navigate to="/app/crew" replace />} /></Route>
     <Route element={<RequireRole role="owner" />}><Route path="owner" element={<Placeholder title="Sites" description="Read-only site visibility for project owners." />} /><Route path="owner/sites/:siteId/history" element={<Placeholder title="Safety history" description="Read-only history for a selected site." />} /><Route path="owner/verify" element={<Placeholder title="Verify records" description="Read-only verification records." />} /></Route>
   </Route></Route>
   <Route path="*" element={<Navigate to="/app" replace />} />
