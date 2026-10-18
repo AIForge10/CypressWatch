@@ -226,6 +226,10 @@
 .cw-report-list { display: grid; gap: 16px; }
 /* Same 20px side padding as .cw-section-heading, so rows line up with the card title. */
 .cw-verify-list { padding: 0 20px 6px; }
+.cw-insights { display: grid; gap: 12px; margin-top: 14px; }
+.cw-insight { padding: 12px 14px; border: 1px solid var(--cw-border); border-radius: var(--cw-radius-md); background: var(--cw-subtle); }
+.cw-insight p { margin: 0; }
+.cw-insight-text { margin: 4px 0 !important; color: var(--cw-ink); line-height: 1.5; }
 .cw-verify-list > .cw-factor { gap: 16px; }
 .cw-verify-list > .cw-factor > div { min-width: 0; overflow-wrap: anywhere; }
 .cw-verify-list > .cw-muted { padding: 4px 0 16px; margin: 0; }

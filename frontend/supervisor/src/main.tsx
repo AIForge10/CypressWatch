@@ -5,7 +5,7 @@ import Map, { Marker, NavigationControl, Popup } from 'react-map-gl/maplibre';
 import type { StyleSpecification } from 'maplibre-gl';
 import { Badge, Button, Card, PageHeader } from '@cypresswatch/ui';
 import { AccessDenied, AuthProvider, RequireAuth, RequireRole, useAuth } from './auth';
-import { isRiskLevel, live, summaryToSite, type Briefing, type CrewReport, type HazardKey, type Lang, type ReportStatus, type Severity, type SiteScore } from './live';
+import { isRiskLevel, live, summaryToSite, type Briefing, type CrewReport, type HazardKey, type Lang, type ReportStatus, type Severity, type SiteInsights, type SiteScore } from './live';
 import { riskTone, siteDetailData, sites as demoSites, type RiskLevel, type Site } from './data';
 import './app.css';
 import '@cypresswatch/ui/tokens.css';
@@ -360,7 +360,7 @@ function SiteDetail() {
     </div></div>}
     <div id="hazard-evidence" className="cw-detail-grid"><div>
       <Card className="cw-panel"><div className="cw-risk-hero"><div className="cw-risk-score-large">{site.riskScore.toFixed(1)}</div><div><Badge tone={riskTone(site.riskLevel)}>{site.riskLevel} risk</Badge><p className="cw-muted">Current hazard score out of 10</p></div></div><h2 style={{ marginTop: 26 }}>Why this score?</h2><ScoreExplanation siteId={site.id} liveMode={liveMode} />{site.hazards.map((factor, index) => <div className="cw-factor" key={`${factor.label}-${index}`}><div><p className="cw-factor-label">{factor.label}</p><p className="cw-factor-meta">{factor.source} · Observed {factor.observedAt}</p></div><div className="cw-factor-value"><div>{factor.value}</div><Badge tone={riskTone(factor.severity)}>{factor.severity}</Badge></div></div>)}</Card>
-      <Card className="cw-panel" style={{ marginTop: 20 }}><h2>Forecast drift</h2>{siteDetail.forecast.length ? <div className="cw-forecast">{siteDetail.forecast.map((point) => <div className="cw-forecast-point" key={point.time}><div className="cw-forecast-bar" style={{ height: `${Math.max(18, point.score * 10)}%` }}><span>{point.score.toFixed(1)}</span></div><strong>{point.time}</strong><small>{point.label}</small><p>{point.condition}</p></div>)}</div> : <p className="cw-muted">Forecast unavailable. This does not indicate safe conditions.</p>}</Card>
+      {liveMode ? <TigerInsights siteId={site.id} /> : <Card className="cw-panel" style={{ marginTop: 20 }}><h2>Forecast drift</h2>{siteDetail.forecast.length ? <div className="cw-forecast">{siteDetail.forecast.map((point) => <div className="cw-forecast-point" key={point.time}><div className="cw-forecast-bar" style={{ height: `${Math.max(18, point.score * 10)}%` }}><span>{point.score.toFixed(1)}</span></div><strong>{point.time}</strong><small>{point.label}</small><p>{point.condition}</p></div>)}</div> : <p className="cw-muted">Forecast unavailable. This does not indicate safe conditions.</p>}</Card>}
       <Card className="cw-panel" style={{ marginTop: 20 }}><h2>Latest safety briefing</h2>{liveMode ? <BriefingCard siteId={site.id} compact /> : siteDetail.briefing ? <><p style={{ lineHeight: 1.55 }}>{siteDetail.briefing.summary}</p><p className="cw-muted"><strong>Recommended work window:</strong> {siteDetail.briefing.recommendedWorkWindow}</p><p className="cw-muted">Generated {siteDetail.briefing.generatedAt}</p></> : <p className="cw-muted">No briefing is available for this site.</p>}</Card>
       <Card className="cw-panel" style={{ marginTop: 20 }}><h2>Recent crew reports</h2>{siteDetail.reports.length ? siteDetail.reports.map((report) => <div className="cw-factor" key={report.id}><div><p className="cw-factor-label">{report.hazardType} · {report.author}</p><p className="cw-factor-meta">{report.description} · {report.createdAt}</p></div><Badge tone={riskTone(report.severity)}>{report.status}</Badge></div>) : <p className="cw-muted">No recent crew reports.</p>}</Card>
     </div><div>
@@ -369,6 +369,38 @@ function SiteDetail() {
     </div></div>
   </div>;
 }
+function TigerInsights({ siteId }: { siteId: string }) {
+  const { getAccessToken } = useAuth();
+  const [data, setData] = useState<SiteInsights | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let stopped = false;
+    void live.insights(siteId, getAccessToken).then((r) => { if (!stopped) setData(r); }).catch((e: Error) => { if (!stopped) setError(e.message); });
+    return () => { stopped = true; };
+  }, [getAccessToken, siteId]);
+  const drift = data?.forecast_drift;
+  const values = drift?.snapshots?.map((x) => x.value) ?? [];
+  const storm = data?.storm_approach;
+  const stormText = storm?.summary ?? storm?.message ?? (storm?.approaching
+    ? `Lightning ${storm.nearest_miles ?? '?'} mi ${storm.direction ?? ''}, moving in at ~${storm.speed_mph ?? '?'} mph${storm.eta_minutes ? `: reaches the 10-mile line in ~${storm.eta_minutes} min` : ''}.`
+    : `No lightning approaching: ${storm?.strikes ?? 0} strikes within ${storm?.watch_miles ?? 40} mi in the last 30 min.`);
+  return <Card className="cw-panel" style={{ marginTop: 20 }}>
+    <div className="cw-briefing-top"><h2 style={{ margin: 0 }}>Timeline insights</h2><Badge tone="info">Live from Tiger Data</Badge></div>
+    {error && <p className="cw-muted">Insights unavailable: {error}</p>}
+    {!data && !error && <p className="cw-muted">Loading insights…</p>}
+    {data && <div className="cw-insights">
+      <div className="cw-insight"><p className="cw-eyebrow">Forecast drift · every forecast run kept</p>
+        <p className="cw-insight-text">{drift?.summary ?? 'Not enough forecast runs yet.'}</p>
+        {values.length > 1 && <p className="cw-factor-meta">{values.length} runs for {drift!.valid_at.slice(11, 16)} UTC: {values.join('% → ')}%</p>}</div>
+      <div className="cw-insight"><p className="cw-eyebrow">Days like today · pgvector over 10 years</p>
+        <p className="cw-insight-text">{data.days_like_today?.summary ?? 'History not loaded for this site.'}</p>
+        {data.days_like_today?.base_rate != null && <p className="cw-factor-meta">Hazard rate on similar days {Math.round((data.days_like_today.event_rate ?? 0) * 100)}% vs {Math.round(data.days_like_today.base_rate * 100)}% usual</p>}</div>
+      <div className="cw-insight"><p className="cw-eyebrow">Storm approach · time_bucket + regr_slope</p>
+        <p className="cw-insight-text">{stormText}</p></div>
+    </div>}
+  </Card>;
+}
+
 const FALLBACK_EXPLANATION = 'These are the leading contributors to the hazard score. Review their source and timestamp before making an operational decision.';
 
 function ScoreExplanation({ siteId, liveMode }: { siteId: string; liveMode: boolean }) {
