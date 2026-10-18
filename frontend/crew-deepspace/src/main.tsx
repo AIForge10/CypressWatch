@@ -4,6 +4,10 @@ import { createRoot, hydrateRoot } from 'react-dom/client'
 import { routes } from '@generouted/react-router/lazy'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import { installStaleChunkRecovery } from './stale-chunk-recovery'
+import '@fontsource/open-sans/latin-400.css'
+import '@fontsource/open-sans/latin-600.css'
+import '@fontsource/open-sans/latin-700.css'
+import '@fontsource/open-sans/latin-800.css'
 import './styles.css'
 
 async function main() {
