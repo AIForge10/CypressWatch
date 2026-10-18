@@ -93,7 +93,7 @@ https://aistudio.google.com, **Tiger Data** + **Vultr** + **NASA FIRMS key**.
 
 | Area | Sponsor tech |
 |---|---|
-| Frontend: Supervisor | Easy On The Eyes, Auth0, Domain |
+| Frontend: Supervisor | Easy On The Eyes, Auth0 |
 | Frontend: Crew | DeepSpace, Hardware |
 | AI/ML Lead | AI/ML, Gemini, Solana |
 | Backend / Platform Lead | Sperry core, Tiger Data, Vultr |
