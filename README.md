@@ -13,6 +13,7 @@ Built for **Sperry Tech PlanIT Control** at SwampHacks XII. The full plan is in 
 | **Supervisor dashboard** (Auth0 sign-in) | https://64-177-55-82.sslip.io |
 | **Crew app** (phone, Google sign-in via DeepSpace) | https://cypresswatch-crew.app.space |
 | **API docs** | https://64-177-55-82.sslip.io/docs |
+| **Judge login** (dashboard) | see the Devpost submission |
 | **Solana Safety Ledger** (devnet wallet) | [7J888…4bYp transactions](https://explorer.solana.com/address/7J888M9EHynGgFTiWc9iSCbb5Nc89r1gGGMskhJv4bYp?cluster=devnet) |
 
 Running on **Vultr** (API, lightning engine, GOES-19 lightning ingest, scheduler, Tiger sync behind HTTPS) with
