@@ -1,6 +1,7 @@
 # Ingestion workers, lightning/flood alert engines, 6 PM scheduler (M4).
 apscheduler<4
 httpx
+requests                  # Open-Meteo, NOAA, USGS, and NWS ingestion
 psycopg[binary,pool]
 python-dotenv
 xarray                   # GOES GLM lightning files are NetCDF

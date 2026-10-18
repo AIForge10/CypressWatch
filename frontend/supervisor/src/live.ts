@@ -7,13 +7,16 @@ export const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost
 
 import type { Site, StopWorkEvent, LedgerVerify } from './data';
 
+export type AccessTokenGetter = (options?: { forceRefresh?: boolean }) => Promise<string | null>;
+
 type BackendRisk = 'low' | 'moderate' | 'high' | 'extreme';
 export type SiteSummary = {
   site_id: string; name: string; location: string; lat: number; lon: number; timezone: string;
   hazard_score: number | null; risk_level: BackendRisk | null;
   top_factors: { feature: string; label: string; contribution: number; rule?: boolean }[];
-  scored_at: string | null; data_freshness: string;
-  stop_work: null | { alert_id: string; reason: string; started_at: string; stop_work_until: string; acknowledged: boolean };
+  scored_at: string | null; weather_fetched_at?: string | null; data_freshness: string;
+  stop_work: null | { alert_id: string; reason: string; started_at: string; stop_work_until: string; last_strike_at?: string; acknowledged: boolean; simulated?: boolean };
+  flood_warning?: null | { alert_id: string; reason: string; message: string; started_at: string; simulated: boolean };
 };
 type SummaryResponse = { server_time: string; sites: SiteSummary[] };
 export type AlertsResponse = {
@@ -24,25 +27,19 @@ export type LedgerRecord = {
   record_id: string; record_type: string; site_id: string; created_at: string; anchored: boolean;
   merkle_root: string | null; transaction_signature: string | null;
 };
-export type Person = { userId: string; name: string } | { user_id: string; name: string } | null | undefined;
-
-function headers(user: Person, mfa = false): HeadersInit {
-  const h: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (user) {
-    const id = 'userId' in user ? user.userId : user.user_id;
-    h['X-User-Id'] = id ?? 'unknown';
-    h['X-User-Name'] = user?.name ?? '';
-  }
-  if (mfa) h['X-MFA-Verified'] = 'true';
-  return h;
-}
-
-async function call<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, init);
+async function call<T>(path: string, getAccessToken: AccessTokenGetter, init: RequestInit = {}): Promise<T> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) throw new Error('API access token unavailable. Sign in again and retry.');
+  const headers = new Headers(init.headers);
+  headers.set('Authorization', `Bearer ${accessToken}`);
+  if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  const res = await fetch(`${API_URL}${path}`, { ...init, headers });
   if (!res.ok) {
     let detail: unknown = null;
     try { detail = (await res.json()).detail; } catch { /* non-JSON error */ }
-    throw Object.assign(new Error(`API ${res.status} on ${path}`), { status: res.status, detail });
+    const message = detail && typeof detail === 'object' && 'message' in detail && typeof detail.message === 'string'
+      ? detail.message : null;
+    throw Object.assign(new Error(message ? `API ${res.status}: ${message}` : `API ${res.status} on ${path}`), { status: res.status, detail });
   }
   return res.json() as Promise<T>;
 }
@@ -58,9 +55,11 @@ export function normalizeRisk(level: BackendRisk): Site['riskLevel'] {
 
 const hazardTypeFor = (feature: string): Site['primaryHazards'][number] =>
   feature.includes('lightning') ? 'Lightning'
-  : feature.includes('precip') || feature.includes('rain') || feature.includes('flood') ? 'Flooding'
+  : feature.includes('flood') ? 'Flooding'
+  : feature.includes('precip') || feature.includes('rain') ? 'Rain'
   : feature.includes('temp') || feature.includes('heat') ? 'Heat'
-  : 'Soil saturation';
+  : feature.includes('wind') || feature.includes('gust') ? 'Wind'
+  : 'Context';
 
 export function summaryToSite(s: SiteSummary): Site {
   const active = Boolean(s.stop_work);
@@ -69,9 +68,10 @@ export function summaryToSite(s: SiteSummary): Site {
     startedAt: s.stop_work!.started_at,
     allClearAt: s.stop_work!.stop_work_until,
     status: 'active',
-    lastStrikeAt: s.stop_work!.started_at,
+    lastStrikeAt: s.stop_work!.last_strike_at ?? s.stop_work!.started_at,
     acknowledged: s.stop_work!.acknowledged,
     alertId: s.stop_work!.alert_id,
+    simulated: Boolean(s.stop_work!.simulated),
   } : undefined;
   return {
     id: s.site_id,
@@ -83,8 +83,17 @@ export function summaryToSite(s: SiteSummary): Site {
     landscape: 'woodland',
     riskScore: s.hazard_score ?? 0,
     riskLevel: isRiskLevel(s.risk_level) ? normalizeRisk(s.risk_level) : 'Low',
-    primaryHazards: s.top_factors.slice(0, 3).map((factor) => hazardTypeFor(factor.feature)),
+    primaryHazards: [...new Set([
+      ...(s.flood_warning ? ['Flooding' as const] : []),
+      ...s.top_factors.slice(0, 3).map((factor) => hazardTypeFor(factor.feature)).filter((type) => type !== 'Context'),
+    ])],
     activeAlert: stopWork,
+    activeFloodWarning: s.flood_warning ? {
+      reason: s.flood_warning.reason,
+      message: s.flood_warning.message,
+      startedAt: s.flood_warning.started_at,
+      simulated: s.flood_warning.simulated,
+    } : undefined,
     lastUpdated: s.scored_at ?? 'unknown',
     dataFreshness: s.data_freshness === 'Fresh' ? 'Fresh' : s.data_freshness === 'Stale' ? 'Stale' : 'Unavailable',
     hazards: s.top_factors.map((factor) => ({
@@ -92,47 +101,53 @@ export function summaryToSite(s: SiteSummary): Site {
       label: factor.label,
       value: `${factor.contribution.toFixed(1)} pts`,
       severity: factor.contribution >= 1.5 ? 'High' : factor.contribution >= 0.4 ? 'Elevated' : 'Guarded',
-      source: factor.rule ? 'Deterministic alert rule' : 'Hazard model',
-      observedAt: s.scored_at ? `${s.scored_at.slice(11, 19)} UTC` : '',
+      source: factor.rule ? 'Deterministic alert rule' : 'Open-Meteo weather · hazard model',
+      observedAt: s.weather_fetched_at ? `${s.weather_fetched_at.slice(11, 19)} UTC` : s.scored_at ? `${s.scored_at.slice(11, 19)} UTC` : '',
       contribution: factor.contribution,
     })),
   };
 }
 
 export const live = {
-  summary: () => call<SummaryResponse>('/api/sites/summary'),
+  summary: (getAccessToken: AccessTokenGetter) => call<SummaryResponse>('/api/sites/summary', getAccessToken),
 
-  alerts: () => call<AlertsResponse>('/api/alerts?status=active'),
+  alerts: (getAccessToken: AccessTokenGetter) => call<AlertsResponse>('/api/alerts?status=active', getAccessToken),
 
-  acknowledge: (alertId: string, user: Person) =>
-    call<{ ledger_record_id: string | null }>(`/api/alerts/${alertId}/acknowledge`, { method: 'POST', headers: headers(user) }),
+  acknowledge: (alertId: string, getAccessToken: AccessTokenGetter) =>
+    call<{ ledger_record_id: string | null }>(`/api/alerts/${alertId}/acknowledge`, getAccessToken, { method: 'POST' }),
 
-  override: (alertId: string, user: Person, reason: string, mfa = true) =>
-    call<{ ledger_record_id: string | null }>(`/api/alerts/${alertId}/override`,
-      { method: 'POST', headers: headers(user, mfa), body: JSON.stringify({ reason: reason || 'verified all-clear' }) }),
+  override: (alertId: string, getAccessToken: AccessTokenGetter, reason: string) =>
+    call<{ ledger_record_id: string | null }>(`/api/alerts/${alertId}/override`, getAccessToken,
+      { method: 'POST', body: JSON.stringify({ reason: reason || 'verified all-clear' }) }),
 
-  demoStrike: (siteId: string, distanceMiles = 4.2) =>
-    call<{ queued_strike: unknown }>('/api/demo/strike', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+  demoStrike: (siteId: string, getAccessToken: AccessTokenGetter, distanceMiles = 4.2) =>
+    call<{ queued_strike: unknown }>('/api/demo/strike', getAccessToken, {
+      method: 'POST',
       body: JSON.stringify({ site_id: siteId, distance_miles: distanceMiles }),
     }),
 
   // Simulated heavy-rain night: the flood rule raises flood_risk alerts on river sites
   // (river flag / FEMA zone / near a USGS gauge) on its next flood tick. Simulated: true.
-  demoHeavyRain: (siteId: string, overnightIn = 4.5) =>
+  demoHeavyRain: (siteId: string, getAccessToken: AccessTokenGetter, overnightIn = 4.5) =>
     call<{ flood_alert_expected: boolean; river_sites: { site_id: string; name: string }[] }>(
-      '/api/demo/flood-rain', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      '/api/demo/flood-rain', getAccessToken, {
+      method: 'POST',
       body: JSON.stringify({ site_id: siteId, overnight_in: overnightIn }),
     }),
 
-  ledgerRecords: () => call<{ records: LedgerRecord[] }>('/api/ledger/records'),
+  ledgerRecords: (getAccessToken: AccessTokenGetter) => call<{ records: LedgerRecord[] }>('/api/ledger/records', getAccessToken),
 
-  verify: (recordId: string) =>
-    call<LedgerVerify>(`/api/ledger/verify/${recordId}`),
+  verify: (recordId: string, getAccessToken: AccessTokenGetter) =>
+    call<LedgerVerify>(`/api/ledger/verify/${recordId}`, getAccessToken),
 
-  openEvents: (onEvent: (event: { type: string; site_id: string; data: Record<string, unknown> }) => void): WebSocket => {
+  openEvents: (getAccessToken: AccessTokenGetter, onEvent: (event: { type: string; site_id: string; data: Record<string, unknown> }) => void): WebSocket => {
     const ws = new WebSocket(`${API_URL.replace(/^http/, 'ws')}/api/ws`);
+    ws.addEventListener('open', () => {
+      void getAccessToken().then((accessToken) => {
+        if (accessToken && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ access_token: accessToken }));
+        else ws.close(4401);
+      }).catch(() => ws.close(4401));
+    });
     ws.addEventListener('message', (message) => {
       try {
         const payload = JSON.parse(message.data) as { event?: { type: string; site_id: string; data: Record<string, unknown> } };

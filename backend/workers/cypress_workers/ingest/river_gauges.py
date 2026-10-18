@@ -49,7 +49,7 @@ def poll(state_cd: str = STATE_CD, window_hours: float = 3.0, timeout: int = 90)
 
 
 def _parse_iv(body: dict) -> list[dict]:
-    """NWIS IV JSON: one entry per value-series. Latest value = stage, rise = max - min over the window."""
+    """NWIS IV JSON: one entry per value-series. Rise is latest minus earliest valid stage."""
     out = []
     for series in body.get("value", {}).get("timeSeries", []):
         try:
@@ -67,6 +67,7 @@ def _parse_iv(body: dict) -> list[dict]:
                     samples.append((v["dateTime"], float(v["value"])))
                 except (KeyError, TypeError, ValueError):
                     continue
+        samples.sort(key=lambda sample: sample[0])
         stage = samples[-1][1] if samples else None
         if stage is not None and stage < 0:  # missing-value sentinels (e.g. -999999) are not water
             stage = None
@@ -74,8 +75,8 @@ def _parse_iv(body: dict) -> list[dict]:
         rise = None
         if stage is not None:
             window = [v for _, v in samples if v >= 0]
-            if len(window) >= 2 and max(window) > min(window):
-                rise = round(max(window) - min(window), 2)
+            if len(window) >= 2:
+                rise = round(max(0.0, stage - window[0]), 2)
         out.append({"site_no": site_no, "name": name, "lat": lat, "lon": lon,
                     "stage_ft": stage, "rise_ft": rise})
     return out

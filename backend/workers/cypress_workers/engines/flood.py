@@ -1,8 +1,8 @@
 """Flood-risk engine: river sites get a flood-risk warning after a night of heavy rain.
 
 Deterministic rule (the plan's flood requirement, contracts/README.md):
-  - Rain trigger: overnight rainfall (the last two local-day precipitation sums, so a whole
-    night fits in the window) >= FLOOD_RAIN_INCHES on a river-relevant site.
+  - Rain trigger: hourly precipitation from 6 PM local time yesterday through 6 AM today,
+    capped at the site's current observed hour, >= FLOOD_RAIN_INCHES on a river site.
   - NWS trigger: an active NWS flood alert whose areaDesc lists the site's county.
   - Gauge trigger: a reporting USGS stage gauge within GAUGE_PROXIMITY_MILES whose stage
     rose >= GAUGE_RISE_FEET over the ingest window.
@@ -13,7 +13,7 @@ COORDINATES are permanent, so relevance uses them even when the snapshot is old;
 stage/rise numbers need a fresh snapshot.
 
 Input files (backend/workers/data/live/):
-  weather_latest.json   ingest/weather_live.py (daily rows carry precipitation_sum)
+  weather_latest.json   ingest/weather_live.py (hourly precipitation for overnight rain)
   river_gauges.json     ingest/river_gauges.py (USGS gage height 00065; optional input)
   flood_alerts.json     ingest/nws_alerts.py (NWS active flood alerts; optional input)
   flood_queue.json      demo heavy-rain injections, always simulated:true (POST /api/demo/flood-rain)
@@ -106,16 +106,36 @@ def tick() -> list[dict]:
 # ---------- inputs ----------
 
 def _overnight_rain(sites: dict, demo: dict, now: datetime):
-    """(rain lookup, injected site ids). Live sites read the weather snapshot's newest two daily
-    sums; a demo injection overrides that site for FLOOD_ALERT_HOURS (simulated, labeled)."""
+    """(rain lookup, injected site ids). Use observed hours, never forecast hours."""
     real: dict[str, float] = {}
     snap = read_json(WEATHER_FILE, {}) or {}
-    for rec in snap.get("sites", []):
-        daily = rec.get("daily") or []
-        if len(daily) < 2:
-            continue
-        total = sum(float(d.get("precipitation_sum") or 0) for d in daily[-2:])
-        real[rec["site_id"]] = round(total, 2)
+    fetched = snap.get("fetched_at")
+    try:
+        weather_is_fresh = bool(fetched) and (now - _ts(fetched)).total_seconds() <= SNAPSHOT_MINUTES * 60
+    except ValueError:
+        weather_is_fresh = False
+    if weather_is_fresh:
+        for rec in snap.get("sites", []):
+            observed = rec.get("current", {}).get("observed_at_local")
+            try:
+                local_now = datetime.fromisoformat(observed)
+            except (TypeError, ValueError):
+                continue
+            start = local_now.replace(hour=18, minute=0, second=0, microsecond=0) - timedelta(days=1)
+            end = min(local_now, local_now.replace(hour=6, minute=0, second=0, microsecond=0))
+            total = 0.0
+            has_hours = False
+            for hour in rec.get("hourly", []):
+                try:
+                    at = datetime.fromisoformat(hour["time"])
+                    amount = hour.get("precipitation")
+                    if start <= at < end and amount is not None:
+                        total += float(amount)
+                        has_hours = True
+                except (KeyError, TypeError, ValueError):
+                    continue
+            if has_hours:
+                real[rec["site_id"]] = round(total, 2)
     fresh = {s: v for s, v in demo.items()
              if now - _ts(v["recorded_at"]) < timedelta(hours=FLOOD_ALERT_HOURS)}
 

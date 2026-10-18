@@ -11,8 +11,9 @@ immediately when the queue file exists) and, on river-relevant sites, raises a f
 flood_alert_started. River-relevant = river_site flag / non-X FEMA zone / near a USGS gauge —
 the response lists those sites so the demo operator picks one that will actually warn.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.auth import AuthenticatedUser, require_roles, require_site_access
 from cypress_workers.common import (LIGHTNING_FILE, SITES_FILE, STRIKES_QUEUE_FILE, load_sites,
                                     now_iso, read_json, write_json)
 
@@ -20,10 +21,11 @@ router = APIRouter(prefix="/api/demo", tags=["demo"])
 
 
 @router.post("/strike")
-def strike(request: dict):
+def strike(request: dict, user: AuthenticatedUser = Depends(require_roles("supervisor"))):
     if not (site_id := request.get("site_id")) or site_id not in load_sites():
         raise HTTPException(status_code=404, detail={"error": "not_found",
                                                      "message": f"Site {site_id} does not exist."})
+    require_site_access(user, site_id)
     distance = round(float(request.get("distance_miles", 4.2)), 1) or 4.2
     strike_in = {
         "site_id": site_id,
@@ -40,12 +42,13 @@ def strike(request: dict):
 
 
 @router.post("/flood-rain")
-def heavy_rain(request: dict):
+def heavy_rain(request: dict, user: AuthenticatedUser = Depends(require_roles("supervisor"))):
     site_id = request.get("site_id")
     sites = load_sites()
     if not site_id or site_id not in sites:
         raise HTTPException(status_code=404, detail={"error": "not_found",
                                                      "message": f"Site {site_id} does not exist."})
+    require_site_access(user, site_id)
     overnight = min(max(float(request.get("overnight_in", 4.5) or 4.5), 0.1), 20.0)
     from cypress_workers.engines.flood import river_relevant_sites, simulate_rain
     queued = simulate_rain(site_id, overnight)

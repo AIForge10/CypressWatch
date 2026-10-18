@@ -6,6 +6,21 @@ Mirror request/response types in `frontend/packages/shared/src`.
 
 Live, auto-generated docs while the API runs: http://localhost:8000/docs
 
+`GET /api/sites/summary` combines the site inventory with today's hazard score
+and active alerts. `data_freshness` describes the score age, and
+`weather_fetched_at` gives the Open-Meteo snapshot time used for the score.
+`stop_work` contains only active lightning stop-work alerts, including
+`last_strike_at` and `simulated`; `flood_warning` is a separate warning and
+never carries a stop-work countdown. The response includes only sites in the
+validated access token's `site_ids` claim.
+
+## Auth
+
+Every `/api/*` endpoint requires `Authorization: Bearer <Auth0 access token>`; `/health` remains public.
+The API validates the token signature against the tenant JWKS, issuer, audience, expiry, role,
+and assigned site ids. The browser never supplies trusted identity or MFA headers. See
+[`auth0-api.md`](auth0-api.md) for the environment values and required Post-Login Action claims.
+
 | Router file | Prefix | Owner | Endpoints (fill in) |
 |---|---|---|---|
 | `sites.py` | `/sites` | M4 | |

@@ -206,13 +206,17 @@ def main() -> None:
                     help="seconds between GOES GLM ingest passes (0 = never; scheduler owns it instead)")
     ap.add_argument("--flood-poll", type=float, default=120.0,
                     help="seconds between flood-rule ticks (0 = never; flood demo ticks via queue alone)")
+    ap.add_argument("--gauge-poll", type=float, default=900.0,
+                    help="seconds between USGS gauge fetches (0 = never)")
+    ap.add_argument("--nws-poll", type=float, default=300.0,
+                    help="seconds between NWS alert fetches (0 = never)")
     ap.add_argument("--satellite", default="19", choices=["16", "18", "19"],
                     help="GOES-East is GOES-19; 16/18 kept for fallback/archive work")
     ap.add_argument("--once", action="store_true", help="one tick and exit")
     args = ap.parse_args()
 
-    from cypress_workers.ingest import lightning_glm
-    glm_last, flood_last = 0.0, 0.0
+    from cypress_workers.ingest import lightning_glm, nws_alerts, river_gauges
+    glm_last, flood_last, gauge_last, nws_last = 0.0, 0.0, 0.0, 0.0
     step = 1
     while True:
         try:
@@ -225,6 +229,18 @@ def main() -> None:
             if args.glm_poll > 0 and (now - glm_last >= args.glm_poll or snap_age > args.glm_poll):
                 glm_last = now
                 lightning_glm.poll(args.satellite)
+            if args.gauge_poll > 0 and now - gauge_last >= args.gauge_poll:
+                gauge_last = now
+                try:
+                    river_gauges.poll()
+                except Exception as e:
+                    print(f"  [error] river_gauges: {e}")
+            if args.nws_poll > 0 and now - nws_last >= args.nws_poll:
+                nws_last = now
+                try:
+                    nws_alerts.poll()
+                except Exception as e:
+                    print(f"  [error] nws_alerts: {e}")
             if args.flood_poll > 0 and (now - flood_last >= args.flood_poll or FLOOD_QUEUE_FILE.exists()):
                 flood_last = now  # a queued demo heavy-rain night must not wait a full cadence
                 from cypress_workers.engines import flood
