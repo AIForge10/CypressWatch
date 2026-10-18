@@ -129,9 +129,9 @@ falls back to Flash, and if Gemini is down entirely, plain templates are used. T
 
 | Feature | Guardrail tests | Live Gemini cases | Median latency |
 |---|---|---|---|
-| Explanations | 6/6 | 6/6 | 2.8 s (batch of 5) |
-| Briefing EN+ES | 16/16 | 3/3 | 3.5 s |
-| Photo triage | 15/15 | 5/5 (incl. prompt injection) | 4.1 s |
+| Explanations | 6/6 | 6/6 | 3.0 s (batch of 5) |
+| Briefing EN+ES | 16/16 | 3/3 | 2.7 s |
+| Photo triage | 15/15 | 5/5 (incl. prompt injection) | 2.5 s |
 
 Guardrail tests feed bad outputs to the validators, which must reject all of them, and check the safety
 rules and the fallbacks when Gemini is down. Live cases run real Gemini calls on real site data and photos.

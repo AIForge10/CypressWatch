@@ -1,5 +1,6 @@
 // Live backend service for the supervisor app. Talks to the CypressWatch API (M4):
-// /api/sites/summary, /api/alerts, /api/demo/strike, /api/reports, /api/ledger/*, /api/ws.
+// /api/sites/summary, /api/sites/{id}, /api/sites/{id}/briefing, /api/alerts, /api/demo/*, /api/reports,
+// /api/ledger/*, /api/ws.
 // Falls back to the bundled demo data whenever the backend is unreachable, so the
 // screens always render something; every consumer marks the feed "Live" vs "Demo".
 
@@ -35,6 +36,19 @@ export type CrewReport = {
   captured_at: string; uploaded_at: string; reported_by: { user_id: string; name: string };
   triage: { hazard: HazardKey; severity: Severity; description: string; confidence: number; model: string } | null;
   status: ReportStatus; confirmed_hazard: HazardKey | null; confirmed_severity: Severity | null; ledger_record_id: string | null;
+};
+export type Lang = 'en' | 'es';
+export type Briefing = {
+  briefing_id: string; site_id: string; for_date: string; generated_at: string; language: Lang;
+  headline: string; hazard_score_forecast: number | null; risk_level: BackendRisk | null;
+  best_work_window: { date: string; start_local: string; end_local: string; reason: string } | null;
+  items: { hazard: HazardKey; level: BackendRisk; text: string; source_ids: string[] }[];
+  missing_data: string[]; sources: { id: string; source: string; observed_at: string | null; description: string }[];
+  disclaimer: string; validated: boolean;
+};
+export type SiteScore = {
+  hazard_score: number | null; risk_level: BackendRisk | null; explanation: string | null; scored_at: string | null;
+  model_version: string | null; top_factors: { feature: string; label: string; contribution: number }[];
 };
 export type ReportConfirmRequest = { status: 'confirmed' | 'dismissed'; confirmed_hazard: HazardKey | null; confirmed_severity: Severity | null };
 
@@ -136,6 +150,12 @@ export const live = {
       method: 'POST',
       body: JSON.stringify({ site_id: siteId, distance_miles: distanceMiles }),
     }),
+
+  briefing: (siteId: string, lang: Lang, getAccessToken: AccessTokenGetter) =>
+    call<Briefing>(`/api/sites/${siteId}/briefing?lang=${lang}`, getAccessToken),
+
+  siteScore: (siteId: string, getAccessToken: AccessTokenGetter) =>
+    call<{ score: SiteScore | null }>(`/api/sites/${siteId}`, getAccessToken).then((detail) => detail.score),
 
   reports: (getAccessToken: AccessTokenGetter, status: ReportStatus | 'all' = 'pending_review') =>
     call<{ server_time: string; reports: CrewReport[] }>(`/api/reports?status=${status}`, getAccessToken),

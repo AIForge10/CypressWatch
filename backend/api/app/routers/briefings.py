@@ -5,8 +5,9 @@ GET /api/sites/{site_id}/briefing?date=YYYY-MM-DD&lang=en -> Briefing (contracts
 """
 from datetime import date as Date
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
+from app.auth import AuthenticatedUser, get_current_user, require_site_access
 from app.routers.common import api_error
 from cypress_db import db
 
@@ -14,7 +15,9 @@ router = APIRouter(prefix="/api", tags=["briefings"])
 
 
 @router.get("/sites/{site_id}/briefing")
-def get_briefing(site_id: str, date: Date | None = Query(None), lang: str = Query("en", pattern="^(en|es)$")):
+def get_briefing(site_id: str, date: Date | None = Query(None), lang: str = Query("en", pattern="^(en|es)$"),
+                 user: AuthenticatedUser = Depends(get_current_user)):
+    require_site_access(user, site_id)
     body = db.get_briefing(site_id, date.isoformat() if date else None, lang)
     if body is None:
         return api_error(404, "not_found",
