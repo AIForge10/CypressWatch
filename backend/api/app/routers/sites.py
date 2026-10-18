@@ -28,7 +28,9 @@ def summary(user: AuthenticatedUser = Depends(get_current_user)) -> dict:
                read_json(LIVE / "scores_latest.json", {}).get("scores", []) if s.get("day_offset") == 0}
     alerts = [a for a in read_json(STOP_WORK_FILE, {"alerts": []}).get("alerts", [])
               if a.get("status") == "active"]
-    stop_work_by_site = {a["site_id"]: a for a in alerts if a.get("type") == "stop_work_lightning"}
+    stop_work_by_site = {}
+    for a in sorted((a for a in alerts if a.get("type") == "stop_work_lightning"), key=lambda a: a.get("stop_work_until") or ""):
+        stop_work_by_site[a["site_id"]] = a  # the latest-ending stop-work per site wins
     flood_by_site = {a["site_id"]: a for a in alerts if a.get("type") == "flood_risk"}
     out = []
     for site in read_json(SITES_FILE, {}).get("sites", []):
@@ -93,8 +95,9 @@ def _alerts_by_site() -> dict[str, list[dict]]:
 
 
 def _stop_work(alerts: list[dict]) -> dict:
-    a = next((x for x in alerts if x.get("severity") == "stop_work" or str(x.get("type", "")).startswith("stop_work")),
-             None)
+    stops = [x for x in alerts if x.get("severity") == "stop_work" or str(x.get("type", "")).startswith("stop_work")]
+    # A new strike can open another stop-work for the same site; the crew must wait for the one that ends last.
+    a = max(stops, key=lambda x: x.get("stop_work_until") or "") if stops else None
     if not a:
         return NO_STOP
     miles = re.search(r"([\d.]+)\s*mi", a.get("title", ""))
