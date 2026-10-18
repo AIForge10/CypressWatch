@@ -20,8 +20,10 @@ export default function SitePage() {
 
   const { site, score, hazards, conditions } = detail
   return (
-    <Screen title={site.name} eyebrow="Your site">
-      <Countdown />
+    <Screen columns title={site.name} eyebrow={`Your site · ${site.county} County, ${site.state}`}>
+      <div className="xl:col-span-2">
+        <Countdown />
+      </div>
       <Card>
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -48,7 +50,7 @@ export default function SitePage() {
         </ul>
       </Card>
 
-      <Card>
+      <Card className="xl:row-span-2">
         <h2 className="mb-2 text-lg font-bold">Hazards at your site</h2>
         <ul className="flex flex-col divide-y-2 divide-border">
           {hazards.map((h) => (
@@ -74,8 +76,12 @@ export default function SitePage() {
         <p className="mt-2 text-sm">Source: {conditions.source}, observed {clock(conditions.observed_at, site.timezone)} {tzAbbrev(site.timezone)}</p>
       </Card>
 
-      {USE_MOCKS && <DemoControls />}
-      <p className="text-sm leading-relaxed">Decision support only. Follow your company&apos;s safety procedures and your supervisor&apos;s direction.</p>
+      {USE_MOCKS && (
+        <div className="xl:col-span-2">
+          <DemoControls />
+        </div>
+      )}
+      <p className="text-sm leading-relaxed xl:col-span-2">Decision support only. Follow your company&apos;s safety procedures and your supervisor&apos;s direction.</p>
     </Screen>
   )
 }
