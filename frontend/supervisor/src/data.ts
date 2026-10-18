@@ -1,5 +1,5 @@
 export type RiskLevel = 'Low' | 'Guarded' | 'Elevated' | 'High' | 'Critical';
-export type HazardType = 'Lightning' | 'Heat' | 'Flooding' | 'Wildfire' | 'Soil saturation';
+export type HazardType = 'Lightning' | 'Heat' | 'Flooding' | 'Wildfire' | 'Soil saturation' | 'Rain' | 'Wind' | 'Context';
 export type SiteLandscape = 'woodland' | 'river' | 'wetland' | 'scrub';
 
 export type HazardFactor = {
@@ -20,6 +20,7 @@ export type StopWorkEvent = {
   lastStrikeAt: string;
   acknowledged?: boolean;
   alertId?: string;
+  simulated?: boolean;
 };
 
 export type Site = {
@@ -33,6 +34,7 @@ export type Site = {
   riskLevel: RiskLevel;
   primaryHazards: HazardType[];
   activeAlert?: StopWorkEvent;
+  activeFloodWarning?: { reason: string; message: string; startedAt: string; simulated: boolean };
   lastUpdated: string;
   dataFreshness: 'Fresh' | 'Stale' | 'Unavailable';
   hazards: HazardFactor[];

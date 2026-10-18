@@ -11,6 +11,9 @@ PATCH /api/reports/{report_id}       report_confirm_request.json -> Report, writ
 GET   /api/sites/{site_id}/reports   ReportsResponse
 
 Photos are saved in backend/data/reports/ (git-ignored). photo_url points at /api/reports/{id}/photo.
+
+Auth: reads need an Auth0 token and only return the caller's sites; PATCH is supervisor-only and records who
+decided. POST stays open until the crew app (DeepSpace sign-in) has an agreed token bridge to this API.
 """
 import hashlib
 import json
@@ -19,9 +22,10 @@ import uuid
 from datetime import datetime, timezone
 from functools import lru_cache
 
-from fastapi import APIRouter, BackgroundTasks, File, Form, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Query, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 
+from app.auth import AuthenticatedUser, get_current_user, require_roles, require_site_access
 from app.routers.common import BACKEND, api_error, now_iso
 from cypress_db import db
 from cypress_workers.common import append_events, make_event
@@ -141,21 +145,29 @@ def create_report(photo: UploadFile = File(...), data: str = Form(...)):
 
 @router.get("/reports")
 def list_reports(status: str = Query("pending_review", pattern="^(pending_review|confirmed|dismissed|all)$"),
-                 limit: int = Query(100, ge=1, le=500)):
+                 limit: int = Query(100, ge=1, le=500),
+                 user: AuthenticatedUser = Depends(require_roles("supervisor", "owner"))):
     where, args = ("", (limit,)) if status == "all" else ("WHERE status = %s", (status, limit))
     with db.conn() as c:
         rows = c.execute(f"SELECT * FROM reports {where} ORDER BY uploaded_at DESC LIMIT %s", args).fetchall()
-    return {"server_time": now_iso(), "status": status, "reports": [db._clean(r) for r in rows]}
+    return {"server_time": now_iso(), "status": status,
+            "reports": [db._clean(r) for r in rows if user.can_access_site(r["site_id"])]}
 
 
 @router.get("/reports/{report_id}")
-def get_report(report_id: str):
+def get_report(report_id: str, user: AuthenticatedUser = Depends(get_current_user)):
     report = db.get_report(report_id)
-    return report or api_error(404, "not_found", f"Unknown report {report_id}")
+    if not report:
+        return api_error(404, "not_found", f"Unknown report {report_id}")
+    require_site_access(user, report["site_id"])
+    return report
 
 
 @router.get("/reports/{report_id}/photo")
-def get_photo(report_id: str):
+def get_photo(report_id: str, user: AuthenticatedUser = Depends(get_current_user)):
+    report = db.get_report(report_id)
+    if report:
+        require_site_access(user, report["site_id"])
     path = _photo_path(report_id)
     if not path.exists():
         return api_error(404, "not_found", f"No photo for {report_id}")
@@ -163,7 +175,9 @@ def get_photo(report_id: str):
 
 
 @router.get("/sites/{site_id}/reports")
-def site_reports(site_id: str, limit: int = Query(50, ge=1, le=200)):
+def site_reports(site_id: str, limit: int = Query(50, ge=1, le=200),
+                 user: AuthenticatedUser = Depends(get_current_user)):
+    require_site_access(user, site_id)
     if not db._site(site_id):
         return api_error(404, "not_found", f"Unknown site {site_id}")
     return {"site_id": site_id, "reports": db.site_reports(site_id, limit)}
@@ -172,10 +186,12 @@ def site_reports(site_id: str, limit: int = Query(50, ge=1, le=200)):
 # ---------- supervisor confirm / dismiss -> Solana ----------
 
 @router.patch("/reports/{report_id}")
-def confirm_report(report_id: str, body: dict, background: BackgroundTasks):
+def confirm_report(report_id: str, body: dict, background: BackgroundTasks,
+                   user: AuthenticatedUser = Depends(require_roles("supervisor"))):
     report = db.get_report(report_id)
     if not report:
         return api_error(404, "not_found", f"Unknown report {report_id}")
+    require_site_access(user, report["site_id"])
     status = body.get("status")
     if status not in ("confirmed", "dismissed"):
         return api_error(422, "invalid_request", "status must be 'confirmed' or 'dismissed'")
@@ -193,6 +209,7 @@ def confirm_report(report_id: str, body: dict, background: BackgroundTasks):
                "ai_hazard": triage.get("hazard"), "ai_severity": triage.get("severity"),
                "ai_confidence": triage.get("confidence"), "reported_by": report.get("reported_by"),
                "captured_at": str(report.get("captured_at")), "decided_at": now_iso(),
+               "decided_by": {"user_id": user.user_id, "name": user.name},
                "photo_sha256": hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None}
     record_id = None
     try:

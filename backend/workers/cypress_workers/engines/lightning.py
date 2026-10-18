@@ -20,10 +20,10 @@ import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from cypress_workers.common import (ALERT_ACTIONS_FILE, LIGHTNING_FILE, STOP_WORK_FILE,
-                                    STOP_WORK_MILES, STOP_WORK_SECONDS, STRIKES_QUEUE_FILE,
-                                    append_events, haversine_miles, iso_now, load_sites, make_event,
-                                    new_id, now_iso, read_json, write_json)
+from cypress_workers.common import (ALERT_ACTIONS_FILE, FLOOD_QUEUE_FILE, LIGHTNING_FILE,
+                                    STOP_WORK_FILE, STOP_WORK_MILES, STOP_WORK_SECONDS,
+                                    STRIKES_QUEUE_FILE, append_events, haversine_miles, iso_now,
+                                    load_sites, make_event, new_id, now_iso, read_json, write_json)
 
 STALE_FLASH_SECONDS = 35 * 60  # older strikes are historical, not live evidence
 
@@ -62,6 +62,8 @@ def tick() -> list[dict]:
     # 2) expiry -> all_clear (30 minutes after the most recent strike)
     now = iso_now()
     for alert in state["alerts"]:
+        if alert["type"] != "stop_work_lightning":
+            continue  # flood alerts (stop_work_until: null) are the flood engine's business
         if alert["status"] == "active" and _ts(alert["stop_work_until"]) <= now:
             alert["status"], alert["cleared_at"] = "cleared", now_iso()
             events.append(make_event("all_clear", alert["site_id"], {
@@ -146,7 +148,8 @@ def _live_strike_map(sites: dict, flashes: list[dict], queued: list[dict]) -> di
 # ---------- state transitions ----------
 
 def _apply_strike(state: dict, site_id: str, strike: dict) -> dict | None:
-    alert = next((a for a in state["alerts"] if a["site_id"] == site_id), None)
+    alert = next((a for a in state["alerts"]
+                  if a["site_id"] == site_id and a["type"] == "stop_work_lightning"), None)
     if alert is None or alert["status"] in ("cleared", "overridden"):
         title, message = _alert_text(strike["distance_miles"])
         alert = {"alert_id": new_id("alt"), "site_id": site_id, "type": "stop_work_lightning",
@@ -196,17 +199,24 @@ def _apply_action(state: dict, action: dict) -> dict | None:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Stop-work engine loop (writes stop_work.json + events.json).")
+    ap = argparse.ArgumentParser(description="Alert engine loop: lightning stop-work + flood rule "
+                                             "(writes stop_work.json + events.json).")
     ap.add_argument("--loop", type=float, default=5.0, help="seconds between ticks")
     ap.add_argument("--glm-poll", type=float, default=60.0,
                     help="seconds between GOES GLM ingest passes (0 = never; scheduler owns it instead)")
+    ap.add_argument("--flood-poll", type=float, default=120.0,
+                    help="seconds between flood-rule ticks (0 = never; flood demo ticks via queue alone)")
+    ap.add_argument("--gauge-poll", type=float, default=900.0,
+                    help="seconds between USGS gauge fetches (0 = never)")
+    ap.add_argument("--nws-poll", type=float, default=300.0,
+                    help="seconds between NWS alert fetches (0 = never)")
     ap.add_argument("--satellite", default="19", choices=["16", "18", "19"],
                     help="GOES-East is GOES-19; 16/18 kept for fallback/archive work")
     ap.add_argument("--once", action="store_true", help="one tick and exit")
     args = ap.parse_args()
 
-    from cypress_workers.ingest import lightning_glm
-    glm_last = 0.0
+    from cypress_workers.ingest import lightning_glm, nws_alerts, river_gauges
+    glm_last, flood_last, gauge_last, nws_last = 0.0, 0.0, 0.0, 0.0
     step = 1
     while True:
         try:
@@ -219,6 +229,23 @@ def main() -> None:
             if args.glm_poll > 0 and (now - glm_last >= args.glm_poll or snap_age > args.glm_poll):
                 glm_last = now
                 lightning_glm.poll(args.satellite)
+            if args.gauge_poll > 0 and now - gauge_last >= args.gauge_poll:
+                gauge_last = now
+                try:
+                    river_gauges.poll()
+                except Exception as e:
+                    print(f"  [error] river_gauges: {e}")
+            if args.nws_poll > 0 and now - nws_last >= args.nws_poll:
+                nws_last = now
+                try:
+                    nws_alerts.poll()
+                except Exception as e:
+                    print(f"  [error] nws_alerts: {e}")
+            if args.flood_poll > 0 and (now - flood_last >= args.flood_poll or FLOOD_QUEUE_FILE.exists()):
+                flood_last = now  # a queued demo heavy-rain night must not wait a full cadence
+                from cypress_workers.engines import flood
+                for event in flood.tick():
+                    print(f"  -> flood {event['type']} {event['site_id']} ({event['event_id']})")
             produced = tick()
             n_active = sum(1 for a in read_json(STOP_WORK_FILE, {}).get("alerts", []) if a["status"] == "active")
             print(f"[{now_iso()}] tick {step}: {len(produced)} event(s), {n_active} active alert(s)")

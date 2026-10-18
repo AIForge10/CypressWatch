@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { AlertTriangle, CircleAlert, CircleCheck, ShieldAlert, type LucideIcon } from 'lucide-react'
 import type { HazardKey, RiskLevel } from '../contracts/types'
 import { HAZARDS, LEVELS } from '../lib/hazards'
+import { useT } from '../lib/i18n'
 import { cn } from '../lib/utils'
 
 /** Page header copies the supervisor's PageHeader: small green eyebrow, big tight title, optional description. */
@@ -26,18 +27,20 @@ const LEVEL_ICON: Record<RiskLevel, LucideIcon> = { low: CircleCheck, moderate: 
 
 /** Level as icon + word. Never color alone. */
 export function LevelBadge({ level, label }: { level: RiskLevel; label?: string }) {
+  const { t } = useT()
   const Icon = LEVEL_ICON[level]
   return (
     <span className={cn('inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-bold', LEVELS[level].cls)}>
       <Icon className="h-4 w-4" aria-hidden />
-      {label ?? LEVELS[level].label}
+      {label ?? t(`lv.${level}`)}
     </span>
   )
 }
 
 export function HazardName({ hazard, className, label: labelOverride }: { hazard: HazardKey; className?: string; label?: string }) {
-  const { label: english, Icon } = HAZARDS[hazard]
-  const label = labelOverride ?? english
+  const { t } = useT()
+  const { Icon } = HAZARDS[hazard]
+  const label = labelOverride ?? t(`hz.${hazard}`)
   return (
     <span className={cn('inline-flex items-center gap-2 font-bold', className)}>
       <Icon className="h-5 w-5" aria-hidden />

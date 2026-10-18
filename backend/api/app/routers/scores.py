@@ -1,17 +1,17 @@
 """Hazard index 0–10, model card, and Tiger Data insights (owner: M3).
 
 GET /api/health                       -> {"ok": true}
-GET /api/me                           -> Me: role + site_ids from the Auth0 token (demo user when Auth0 is not set up)
+GET /api/me                           -> Me: who the Auth0 access token belongs to, its role and site_ids
 GET /api/model                       -> ModelCard (written by backend/ml/src/cypress_ml/train.py)
 GET /api/scores?day_offset=0          -> latest score for every site (today=0, tomorrow=1), ranked
 GET /api/sites/{site_id}/insights     -> forecast drift + days like today + storm approach in one call
 """
 import json
 
-from fastapi import APIRouter, Header, Query
+from fastapi import APIRouter, Depends, Query
 
+from app.auth import AuthenticatedUser, get_current_user
 from app.routers.common import MODEL_CARD, api_error, now_iso
-from app.routers.identity import AuthError, current_user
 from cypress_db import db, history, storm
 
 router = APIRouter(prefix="/api", tags=["scores"])
@@ -23,11 +23,17 @@ def health():
 
 
 @router.get("/me")
-def me(authorization: str | None = Header(None), x_demo_role: str | None = Header(None)):
-    try:
-        return current_user(authorization, x_demo_role)
-    except AuthError as e:
-        return api_error(401, "unauthorized", str(e))
+def me(user: AuthenticatedUser = Depends(get_current_user)):
+    """Contract Me. A "*" site claim is expanded to every site; the contract calls the owner role project_owner."""
+    if "*" in user.site_ids:
+        with db.conn() as c:
+            site_ids = [r["site_id"] for r in c.execute("SELECT site_id FROM sites ORDER BY site_id").fetchall()]
+    else:
+        site_ids = sorted(user.site_ids)
+    language = user.claims.get("https://cypresswatch.app/language") or user.claims.get("locale") or "en"
+    return {"user_id": user.user_id, "name": user.name,
+            "role": "project_owner" if user.role == "owner" else user.role, "site_ids": site_ids,
+            "language": "es" if str(language).startswith("es") else "en", "server_time": now_iso()}
 
 
 @router.get("/model")

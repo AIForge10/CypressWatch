@@ -67,6 +67,15 @@ brew install libomp          # macOS only, for LightGBM
 TimescaleDB and PostGIS are both available (`CREATE EXTENSION IF NOT EXISTS timescaledb;` / `postgis;`).
 If port 5433 is taken: `DB_PORT=5434 docker compose up -d`, then update `DATABASE_URL`.
 
+For local live dashboard data, start the API and the two worker processes in
+[`workers/README.md`](workers/README.md). Set `AUTH0_DOMAIN` and
+`AUTH0_AUDIENCE` in `api/.env`, and make `VITE_API_URL` in
+`frontend/supervisor/.env.local` match the API origin. If port 8000 is already
+in use, run `uvicorn app.main:app --port 8001` from `backend/api` and use
+`VITE_API_URL=http://127.0.0.1:8001`; restart Vite after changing its env file.
+The overview says “Live backend scores” only after every assigned site has a
+score. Site assignments in Auth0 must use IDs from `data/sites/sites.json`.
+
 ## Adding a package
 
 Add the name to **your area's** `requirements.txt` (e.g. `ml/requirements.txt`), then run

@@ -23,6 +23,16 @@
       in src/styles.css (slate) / src/themes.css; keep them in sync when
       adding or editing themes.
     -->
+    <script>
+      /* Apply saved display choices (sunlight, font, size, spacing) before the first paint. */
+      try {
+        var d = document.documentElement, c = localStorage.getItem('cw:sunlight'), r = JSON.parse(localStorage.getItem('cw:reading') || '{}');
+        if (c === 'on' || (c === null && matchMedia('(prefers-contrast: more)').matches)) d.setAttribute('data-contrast', 'high');
+        if (r.font && r.font !== 'standard') d.setAttribute('data-font', r.font);
+        if (r.size === 'lg' || r.size === 'xl') d.setAttribute('data-size', r.size);
+        if (r.spacing === 'wide') d.setAttribute('data-spacing', 'wide');
+      } catch (e) {}
+    </script>
     <style>
       html { background-color: #0a0a0a; color-scheme: dark; }
       html[data-theme="cypress"] { background-color: #eef4f4; color-scheme: light; }

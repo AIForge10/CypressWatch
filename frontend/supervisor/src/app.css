@@ -213,6 +213,7 @@
 .cw-report .cw-section-heading { padding: 0; }
 .cw-report-photo { display: block; overflow: hidden; border-radius: var(--cw-radius-md); background: var(--cw-subtle); aspect-ratio: 4 / 3; }
 .cw-report-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cw-report-photo-empty { display: grid; height: 100%; place-items: center; color: var(--cw-muted); font-size: 13px; }
 .cw-report-body { min-width: 0; }
 .cw-report-note { margin: 10px 0; font-style: italic; line-height: 1.45; }
 .cw-report-triage { margin: 10px 0; padding: 12px 14px; border: 1px solid var(--cw-border); border-radius: var(--cw-radius-md); background: var(--cw-subtle); }

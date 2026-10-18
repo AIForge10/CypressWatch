@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -13,8 +16,14 @@ const appDir = fileURLToPath(new URL('.', import.meta.url))
  * Writes /precache.json: every built script, style and font of the client app.
  * The offline helper (public/sw.js) downloads this whole list when it installs,
  * so the app works offline after ONE visit, including tabs not opened yet.
+ *
+ * It also stamps public/sw.js with a version made from the built file names. A browser only
+ * re-installs the offline helper (and so re-downloads the new files) when sw.js changes. Without
+ * this stamp a new deploy left the phone with the OLD file list, and tabs whose files changed
+ * failed offline with "error loading dynamically imported module".
  */
 function precacheManifest(): Plugin {
+  let stamp = ''
   return {
     name: 'cw-precache-manifest',
     apply: 'build',
@@ -23,7 +32,16 @@ function precacheManifest(): Plugin {
       const files = Object.keys(bundle)
         .filter((f) => !f.endsWith('.map') && !f.endsWith('.html'))
         .map((f) => `/${f}`)
+      stamp = createHash('sha1').update(files.slice().sort().join('\n')).digest('hex').slice(0, 10)
       this.emitFile({ type: 'asset', fileName: 'precache.json', source: JSON.stringify({ files }) })
+    },
+    writeBundle(options) {
+      if (this.environment?.name !== 'client' || !stamp || !options.dir) return
+      const sw = join(options.dir, 'sw.js')
+      if (!existsSync(sw)) return
+      const text = readFileSync(sw, 'utf8')
+      const next = text.replace(/const VERSION = '[^']*'/, `const VERSION = 'cw-crew-${stamp}'`)
+      if (next !== text) writeFileSync(sw, next)
     },
   }
 }

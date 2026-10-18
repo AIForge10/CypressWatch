@@ -9,7 +9,7 @@ Starts (separate processes, so you can also run them alone):
   3. Stop-work engine (--loop 5)      backend/workers  (only writer of alert state)
   4. Scheduler (chain/anchor/briefs)  backend/workers
 Then, once /health is up, it walks the LI on-chain story:
-  demo strike -> active stop-work -> acknowledge -> override (MFA header) ->
+  demo strike -> active stop-work -> acknowledge -> Auth0 step-up override ->
   ledger anchor (records + memo tx on devnet) -> verify a record (prints explorer link).
 
 .PARAMETER Demo
@@ -18,6 +18,12 @@ Run the scripted walkthrough after boot. Default on; -NoDemo skips it.
 Site used for the demo strikes (default site_56407 = West County Energy Center).
 .PARAMETER UI
 Also start the supervisor frontend (npm run dev, port 5173).
+.PARAMETER AccessToken
+Auth0 access token for a supervisor assigned to the selected site. Defaults to
+the CYPRESSWATCH_DEMO_ACCESS_TOKEN environment variable.
+.PARAMETER StepUpAccessToken
+Fresh Auth0 access token issued after MFA. Defaults to
+CYPRESSWATCH_DEMO_STEP_UP_ACCESS_TOKEN. Required only for the scripted override.
 
 .EXAMPLE
 powershell -File scripts\demo_kickoff.ps1 -Site site_621
@@ -25,7 +31,9 @@ powershell -File scripts\demo_kickoff.ps1 -Site site_621
 param(
     [switch]$NoDemo,
     [string]$Site = "site_56407",
-    [switch]$UI
+    [switch]$UI,
+    [string]$AccessToken = $env:CYPRESSWATCH_DEMO_ACCESS_TOKEN,
+    [string]$StepUpAccessToken = $env:CYPRESSWATCH_DEMO_STEP_UP_ACCESS_TOKEN
 )
 $ErrorActionPreference = "Stop"
 if ($PSScriptRoot) { $root = Split-Path $PSScriptRoot -Parent } else { $root = (Get-Location).Path }
@@ -65,7 +73,12 @@ Write-Host "stack is up: api :8000, ws /api/ws, glm + engine + scheduler running
 
 if ($NoDemo) { return }
 
-$H = @{ "X-User-Id" = "auth0|sup_demo"; "X-User-Name" = "Jordan Lee" }
+if (-not $AccessToken) {
+    Write-Host "Demo actions need an Auth0 supervisor access token. Start the UI and complete Auth0 login, or rerun with -AccessToken / CYPRESSWATCH_DEMO_ACCESS_TOKEN." -ForegroundColor Yellow
+    return
+}
+
+$H = @{ Authorization = "Bearer $AccessToken" }
 Write-Host "`n--- 1. queue a simulated lightning strike at $Site ---" -ForegroundColor Yellow
 Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/demo/strike -Headers $H `
     -ContentType "application/json" -Body (@{ site_id = $Site; distance_miles = 4.2 } | ConvertTo-Json) | Out-Null
@@ -94,8 +107,12 @@ try {
 }
 
 Write-Host "--- 5. override with step-up MFA ---" -ForegroundColor Yellow
-$H["X-MFA-Verified"] = "true"
-$over = Invoke-RestMethod -Method Post -Headers $H -ContentType "application/json" -Body '{"reason":"scud cloud in the path"}' `
+if (-not $StepUpAccessToken) {
+    Write-Host "  skipped: use the supervisor UI to complete MFA, then rerun with -StepUpAccessToken." -ForegroundColor Yellow
+    return
+}
+$stepUpHeaders = @{ Authorization = "Bearer $StepUpAccessToken" }
+$over = Invoke-RestMethod -Method Post -Headers $stepUpHeaders -ContentType "application/json" -Body '{"reason":"scud cloud in the path"}' `
     -Uri "http://localhost:8000/api/alerts/$($alert.alert_id)/override"
 Write-Host "  override accepted, ledger record: $($over.ledger_record_id)"
 

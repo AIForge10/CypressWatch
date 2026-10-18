@@ -1,6 +1,8 @@
 """DeepSpace realtime sync (owner: M2; wired by M4): WebSocket push of live events.
 
-`/api/ws` - every subscriber receives contract event envelopes
+`/api/ws` - authenticated subscribers receive only events for their assigned sites.
+The browser sends its Auth0 access token as the first WebSocket message, rather
+than placing a credential in the URL.
 {event_id, type, site_id, occurred_at, simulated, data} (live_events.json), pushed as
 {"server_time": ..., "event": {...}}. On connect the client gets
 {"server_time", "events": [...recent 20...]} to bootstrap offline caches.
@@ -16,6 +18,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.auth.dependencies import AuthenticatedUser, TokenValidationError, authenticate_access_token
 from cypress_workers.common import EVENTS_FILE, now_iso, read_events
 
 router = APIRouter(tags=["realtime"])
@@ -24,26 +27,28 @@ REPLAY = 20
 
 class Hub:
     def __init__(self) -> None:
-        self.clients: list[WebSocket] = []
+        self.clients: list[tuple[WebSocket, AuthenticatedUser]] = []
         self.lock = threading.Lock()
         self.loop: asyncio.AbstractEventLoop | None = None  # pinned by on_startup
 
-    async def connect(self, ws: WebSocket) -> None:
-        await ws.accept()
-        await ws.send_json({"server_time": now_iso(), "events": read_events(REPLAY)})
+    async def connect(self, ws: WebSocket, user: AuthenticatedUser) -> None:
+        await ws.send_json({"server_time": now_iso(), "events": [
+            event for event in read_events(REPLAY) if user.can_access_site(event["site_id"])
+        ]})
         with self.lock:
-            self.clients.append(ws)
+            self.clients.append((ws, user))
 
     def drop(self, ws: WebSocket) -> None:
         with self.lock:
-            if ws in self.clients:
-                self.clients.remove(ws)
+            self.clients = [(client, user) for client, user in self.clients if client is not ws]
 
     async def push(self, event: dict) -> None:
         message = {"server_time": now_iso(), "event": event}
         with self.lock:
             targets = list(self.clients)
-        for ws in targets:
+        for ws, user in targets:
+            if not user.can_access_site(event["site_id"]):
+                continue
             try:
                 await ws.send_json(message)
             except Exception:
@@ -60,7 +65,22 @@ HUB = Hub()
 
 @router.websocket("/api/ws")
 async def ws_events(ws: WebSocket):
-    await HUB.connect(ws)
+    await ws.accept()
+    try:
+        first_message = await asyncio.wait_for(ws.receive_json(), timeout=10)
+        token = first_message.get("access_token") if isinstance(first_message, dict) else None
+        if not isinstance(token, str) or not token:
+            raise TokenValidationError("Bearer access token required.")
+        user = authenticate_access_token(token)
+    except WebSocketDisconnect:
+        return
+    except (TokenValidationError, asyncio.TimeoutError, ValueError):
+        try:
+            await ws.close(code=4401)
+        except WebSocketDisconnect:
+            pass
+        return
+    await HUB.connect(ws, user)
     try:
         while True:
             await ws.receive_text()  # client pings; the server pushes asynchronously

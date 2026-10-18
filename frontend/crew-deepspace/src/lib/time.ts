@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { agoText } from './i18n'
+import type { Lang } from './language'
 
 /** Re-renders every `ms` so countdowns tick. */
 export function useNow(ms = 1000): number {
@@ -42,10 +44,6 @@ export function mmss(totalSeconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-export function ago(iso: string, now: number): string {
-  const min = Math.max(0, Math.floor((now - Date.parse(iso)) / 60_000))
-  if (min < 1) return 'just now'
-  if (min < 60) return `${min} min ago`
-  const h = Math.floor(min / 60)
-  return h < 24 ? `${h} h ago` : `${Math.floor(h / 24)} d ago`
+export function ago(iso: string, now: number, lang: Lang = 'en'): string {
+  return agoText(Math.max(0, Math.floor((now - Date.parse(iso)) / 60_000)), lang)
 }

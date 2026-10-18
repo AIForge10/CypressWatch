@@ -7,12 +7,21 @@
 import { createContext, useContext, useEffect } from 'react'
 import { useQuery, useUser } from 'deepspace'
 import { userKey } from './access'
+import meCrewMock from '../contracts/mocks/me_crew.json'
+
+/**
+ * Demo mode: someone with no assignment yet (a judge, a new teammate) joins this site instead of waiting
+ * on an admin. An admin can still move them on the Team tab. Everyone on it shares live sync and Reset.
+ */
+export const DEFAULT_DEMO_SITE = meCrewMock.site_ids[0] as string
 
 export interface AssignmentState {
   /** False until we know (from the server or from what this phone saved). */
   loaded: boolean
   siteId: string | null
   isAdmin: boolean
+  /** True when no admin assigned a site and the demo site was used instead. */
+  isDefault?: boolean
 }
 
 export const UNKNOWN: AssignmentState = { loaded: false, siteId: null, isAdmin: false }
