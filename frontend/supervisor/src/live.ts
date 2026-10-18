@@ -1,5 +1,5 @@
 // Live backend service for the supervisor app. Talks to the CypressWatch API (M4):
-// /api/sites/summary, /api/alerts, /api/demo/strike, /api/ledger/*, /api/ws.
+// /api/sites/summary, /api/alerts, /api/demo/strike, /api/reports, /api/ledger/*, /api/ws.
 // Falls back to the bundled demo data whenever the backend is unreachable, so the
 // screens always render something; every consumer marks the feed "Live" vs "Demo".
 
@@ -24,6 +24,16 @@ export type LedgerRecord = {
   record_id: string; record_type: string; site_id: string; created_at: string; anchored: boolean;
   merkle_root: string | null; transaction_signature: string | null;
 };
+export type HazardKey = 'lightning' | 'heat' | 'storm' | 'flood' | 'soil_saturation' | 'wildfire' | 'wildlife';
+export type Severity = 'low' | 'medium' | 'high';
+export type ReportStatus = 'pending_review' | 'confirmed' | 'dismissed';
+export type CrewReport = {
+  report_id: string; site_id: string; lat: number | null; lon: number | null; note: string; photo_url: string;
+  captured_at: string; uploaded_at: string; reported_by: { user_id: string; name: string };
+  triage: { hazard: HazardKey; severity: Severity; description: string; confidence: number; model: string } | null;
+  status: ReportStatus; confirmed_hazard: HazardKey | null; confirmed_severity: Severity | null; ledger_record_id: string | null;
+};
+export type ReportConfirmRequest = { status: 'confirmed' | 'dismissed'; confirmed_hazard: HazardKey | null; confirmed_severity: Severity | null };
 export type Person = { userId: string; name: string } | { user_id: string; name: string } | null | undefined;
 
 function headers(user: Person, mfa = false): HeadersInit {
@@ -116,6 +126,14 @@ export const live = {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ site_id: siteId, distance_miles: distanceMiles }),
     }),
+
+  reports: (status: ReportStatus | 'all' = 'pending_review') =>
+    call<{ server_time: string; reports: CrewReport[] }>(`/api/reports?status=${status}`),
+
+  confirmReport: (reportId: string, body: ReportConfirmRequest) =>
+    call<CrewReport>(`/api/reports/${reportId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+
+  photoUrl: (report: CrewReport) => `${API_URL}${report.photo_url}`,
 
   ledgerRecords: () => call<{ records: LedgerRecord[] }>('/api/ledger/records'),
 
