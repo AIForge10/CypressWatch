@@ -75,7 +75,11 @@ deploy/deploy.sh <IP> --push-env --wallet
 It ends with `Live: https://<ip-with-dashes>.sslip.io`. Open `https://<that>/docs` to check.
 Have your own domain? Point an A record at the IP and add `--domain api.yourdomain.com`.
 
-### 4. Point the apps at it
+### 4. Dashboard and apps
+- Add `--frontend` to also serve the supervisor dashboard at `https://<ip-with-dashes>.sslip.io` for the whole team.
+  Then add that URL to Auth0 (Allowed Callback URLs, Logout URLs, Web Origins), or sign-in fails with "Callback URL mismatch".
+
+### 4b. Point the apps at it
 - Supervisor: `VITE_API_URL=https://<ip-with-dashes>.sslip.io` in `frontend/supervisor/.env.local`, restart `npm run dev`.
 - Crew (M2): same `VITE_API_URL`, plus `VITE_USE_MOCKS=false`.
 - Auth0 (M1): nothing changes for the API; the supervisor app still runs from `localhost:5173`.
