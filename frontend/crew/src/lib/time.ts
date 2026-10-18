@@ -25,9 +25,9 @@ export function tzAbbrev(tz: string, at: Date = new Date()): string {
 }
 
 /** "Sat, Oct 17" for a calendar date string like 2026-10-17. */
-export function dayLabel(date: string): string {
+export function dayLabel(date: string, locale = 'en-US'): string {
   const [y, m, d] = date.split('-').map(Number)
-  return new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d)))
+  return new Intl.DateTimeFormat(locale, { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d)))
 }
 
 /** "06:00" -> "6:00 AM". */

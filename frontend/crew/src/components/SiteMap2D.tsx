@@ -5,18 +5,10 @@
  */
 import { useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
-import type { StyleSpecification } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { RiskLevel } from '../contracts/types'
 import { milesBetween, MILES_VISIBLE } from '../lib/geo'
-
-const STYLE: StyleSpecification = {
-  version: 8,
-  sources: {
-    openstreetmap: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, maxzoom: 19, attribution: '© OpenStreetMap contributors' },
-  },
-  layers: [{ id: 'openstreetmap', type: 'raster', source: 'openstreetmap' }],
-}
+import { MAP_STYLE } from '../lib/mapStyle'
 
 export interface MapPoint {
   id: string
@@ -70,7 +62,7 @@ export default function SiteMap2D({ name, lat, lon, score, level, points, focus,
     if (!box.current) return
     let map: maplibregl.Map
     try {
-      map = new maplibregl.Map({ container: box.current, style: STYLE, center: [lon, lat], zoom: 15, maxZoom: 18, attributionControl: { compact: true }, cooperativeGestures: true })
+      map = new maplibregl.Map({ container: box.current, style: MAP_STYLE, center: [lon, lat], zoom: 15, maxZoom: 18, attributionControl: { compact: true }, cooperativeGestures: true })
     } catch {
       failCb.current()
       return

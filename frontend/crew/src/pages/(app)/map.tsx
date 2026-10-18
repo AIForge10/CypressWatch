@@ -3,22 +3,13 @@ import { Screen, Card, HazardName, Message } from '../../components/ui-bits'
 import { SiteView } from '../../components/SiteView'
 import { useFreshness } from '../../lib/freshness'
 import type { MapPoint } from '../../components/SiteMap2D'
-import { milesBetween, MILES_VISIBLE } from '../../lib/geo'
+import { canUseWebGL, milesBetween, MILES_VISIBLE } from '../../lib/geo'
 import { cn } from '../../lib/utils'
 import { useCrew } from '../../lib/crewData'
 import { ago, useNow } from '../../lib/time'
 
 const SIZE = 300
 const SiteMap2D = lazy(() => import('../../components/SiteMap2D'))
-
-function canUseWebGL() {
-  try {
-    const c = document.createElement('canvas')
-    return !!(c.getContext('webgl2') || c.getContext('webgl'))
-  } catch {
-    return false
-  }
-}
 
 /**
  * Your site and the hazard reports around it.

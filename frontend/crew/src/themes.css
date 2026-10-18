@@ -88,3 +88,51 @@
   text-rendering: optimizeLegibility;
 }
 :focus-visible { outline: 3px solid var(--color-ring); outline-offset: 2px; }
+
+/*
+ * Sunlight mode (<html data-contrast="high">): pure black on white, dark saturated status colors,
+ * thick borders, no shadows, no pale greys, and a bigger base size. Every color pair below is at
+ * least 7:1 (WCAG AAA). It only changes tokens and a few rules, so every screen follows automatically.
+ */
+html[data-theme="cypress"][data-contrast="high"] {
+  font-size: 112.5%;
+  --color-background: #ffffff;
+  --color-foreground: #000000;
+  --color-card: #ffffff;
+  --color-card-foreground: #000000;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #000000;
+  --color-primary: #0a3d2c;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #ececec;
+  --color-secondary-foreground: #000000;
+  --color-muted: #ececec;
+  --color-muted-foreground: #1a1a1a;
+  --color-accent: #dcdcdc;
+  --color-accent-foreground: #000000;
+  --color-destructive: #8f0c04;
+  --color-success: #0b5a2d;
+  --color-success-soft: #ffffff;
+  --color-danger-soft: #ffffff;
+  --color-caution: #ffd400;
+  --color-caution-foreground: #000000;
+  --color-brand-strong: #062a1e;
+  --color-brand-soft: #ffffff;
+  --color-border: #000000;
+  --color-input: #000000;
+  --color-ring: #000000;
+  --shadow-card: none;
+  --shadow-card-hover: none;
+  --color-shell: #ffffff;
+  --color-shell-panel: #ffffff;
+}
+html[data-contrast="high"] body { font-weight: 500; }
+html[data-contrast="high"] .border { border-width: 2px; }
+html[data-contrast="high"] .border-b, html[data-contrast="high"] .border-t, html[data-contrast="high"] .border-r { border-width: 2px; }
+html[data-contrast="high"] .divide-y-2 > * + * { border-color: #000; }
+html[data-contrast="high"] :focus-visible { outline: 4px solid #000; outline-offset: 3px; }
+/* Level badges and small notes keep a full-strength border instead of a faint tint. */
+html[data-contrast="high"] [class*="border-success/"], html[data-contrast="high"] [class*="border-destructive/"] { border-color: currentColor; }
+/* The street map goes back to full color and contrast. */
+html[data-contrast="high"] .cw-interactive-map .maplibregl-canvas { filter: none; }
+html[data-contrast="high"] ::placeholder { color: #3a3a3a; opacity: 1; }
