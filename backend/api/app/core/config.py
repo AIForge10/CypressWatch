@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     deepspace_public_key: str | None = None      # optional PEM; skips fetching the JWKS URL
     deepspace_authorized_parties: str = ""       # optional comma list; when set, azp or aud must match one
     crew_assignments: str = ""                   # "a@x.com:site_621|site_56407,b@y.com:site_617"
+    crew_demo_sites: str = ""                    # demo only: unlisted signed-in crew get these sites ("site_56407")
 
 
 settings = Settings()
